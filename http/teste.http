@@ -1,0 +1,27 @@
+### Testando o servidor (Health Check)
+GET http://127.0.0.1:8000/
+Accept: application/json
+
+### Testando o Chat com Contexto Completo
+POST http://127.0.0.1:8000/chat
+Content-Type: application/json
+
+{
+  "message": "quero saber se o aluno 123 está matriculado.",
+  "context": {
+    "user_id": "pedro",
+    "session_id": "sessao-teste-01",
+    "payload": {
+      "tema": "escuro",
+      "plataforma": "rest_client"
+    }
+  }
+}
+
+### Testando o Chat Apenas com a Mensagem (Validando que o contexto é opcional)
+POST http://127.0.0.1:8000/chat
+Content-Type: application/json
+
+{
+  "message": "Aqui vai apenas a mensagem direta, sem enviar o objeto de contexto."
+}
