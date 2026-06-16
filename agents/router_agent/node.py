@@ -18,13 +18,13 @@ def load_prompt():
 
 class Route(str, Enum):
     RAG = "rag"
-    TOOLS = "tools"
+    SERVICES = "services"
     FALLBACK = "fallback"
 
 
 ROUTE_DESCRIPTIONS: dict[Route, str] = {
     Route.RAG: "RAG - busca em base de conhecimento",
-    Route.TOOLS: "TOOLS - consulta a sistemas via capacidades listadas",
+    Route.SERVICES: "SERVICES - fluxos de serviços e consultas a sistemas de acordo com as capacidades listadas",
     Route.FALLBACK: "FALLBACK - conversa geral ou caso não haja capacidade compatível",
 }
 

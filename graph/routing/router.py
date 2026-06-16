@@ -3,7 +3,7 @@ from agents.router_agent.node import Route, RouteDecision
 
 ROUTER_ROUTE_TO_NODE = {
     Route.RAG: "rag_agent",
-    Route.TOOLS: "tool_caller_agent",
+    Route.SERVICES: "service_caller_agent",
     Route.FALLBACK: "fallback_agent",
 }
 

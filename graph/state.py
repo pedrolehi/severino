@@ -11,6 +11,7 @@ class MultiAgentState(TypedDict):
 
     # Roteamento
     decision: dict | None
+    service_target: str | None
     active_flow: str | None
     flow_step: str | None
     flow_data: dict | None

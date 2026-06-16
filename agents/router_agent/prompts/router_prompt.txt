@@ -7,7 +7,7 @@
   2. Identifique a intenção do usuário.
   3. Escolha a rota correta:
      {routes}
-  4. Use TOOLS somente quando existir tool compatível. Caso contrário, use FALLBACK.
+  4. Use SERVICES quando a solicitação puder ser atendida por tool ou flow listados em capabilities. Caso contrário, use FALLBACK.
 </instructions>
 
 <capabilities>

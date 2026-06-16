@@ -2,7 +2,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
 from agents.router_agent import router_agent
-from agents.tool_caller_agent import tool_caller_agent
+from agents.service_caller_agent import service_caller_agent
 
 from flows.entry import route_entry, build_entry_edges
 from flows.registry import register_flow_graphs
@@ -11,7 +11,7 @@ from core.database.memory import get_memory
 
 from graph.dummies import rag_agent, fallback_agent
 from graph.routing.router import route_from_decision, ROUTER_EDGES
-from graph.routing.tool_caller import route_from_tool_caller, TOOL_CALLER_EDGES
+from graph.routing.service_caller import route_from_service_caller, SERVICE_CALLER_EDGES
 from graph.state import MultiAgentState
 
 from tools import tools_list
@@ -21,7 +21,7 @@ workflow = StateGraph(MultiAgentState)
 
 # Setar todos os nodes principais
 workflow.add_node("router_agent", router_agent)
-workflow.add_node("tool_caller_agent", tool_caller_agent)
+workflow.add_node("service_caller_agent", service_caller_agent)
 workflow.add_node("tools_node", ToolNode(tools_list))
 workflow.add_node("rag_agent", rag_agent)
 workflow.add_node("fallback_agent", fallback_agent)
@@ -40,9 +40,9 @@ workflow.add_conditional_edges(
 )
 
 workflow.add_conditional_edges(
-    "tool_caller_agent",
-    route_from_tool_caller,
-    TOOL_CALLER_EDGES,
+    "service_caller_agent",
+    route_from_service_caller,
+    SERVICE_CALLER_EDGES,
 )
 
 # Fim de turnos específicos
