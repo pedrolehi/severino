@@ -1,5 +1,5 @@
 from graph.state import MultiAgentState
-from flows.registry import FLOW_BUILDERS
+from flows.registry import FLOWS
 
 
 def route_entry(state: MultiAgentState) -> str:
@@ -13,7 +13,7 @@ def build_entry_edges() -> dict[str, str]:
         "router": "router_agent",
     }
 
-    for name in FLOW_BUILDERS:
+    for name in FLOWS:
         edges[name] = name
 
     return edges

@@ -1,6 +1,9 @@
 import importlib
 import pkgutil
 from langchain_core.tools import BaseTool
+from typing import List
+
+from flows.registry import build_flow_tools
 
 
 def _discover_tools() -> list[BaseTool]:
@@ -20,10 +23,17 @@ def _discover_tools() -> list[BaseTool]:
     return tools
 
 
+tools_list = _discover_tools()
+flow_tools = build_flow_tools()
+
+bindable_tools = tools_list + flow_tools
+
+tools_dict = {tool.name: tool for tool in tools_list}
+
+
 def get_tools_catalog():
     return "\n".join(f"- {tool.name}: {tool.description}" for tool in tools_list)
 
 
-tools_list = _discover_tools()
-
-tools_dict = {tool.name: tool for tool in tools_list}
+def get_bindagle_catalog():
+    return "\n".join(f"- {tool.name}: {tool.description}" for tool in bindable_tools)

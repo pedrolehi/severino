@@ -1,7 +1,6 @@
 from langchain_core.messages import AIMessage, HumanMessage
 from graph.state import MultiAgentState
 
-FLOW_NAME = "segunda_via_boleto"
 FORM_MESSAGE = (
     "Por favor, preencha as informações abaixo:\n"
     "- Nome completo do titular\n"
@@ -9,9 +8,11 @@ FORM_MESSAGE = (
     "Exemplo: João da Silva, 12/06/2026"
 )
 
+FLOW_NAME = "segunda_via_boleto"
+
 
 def segunda_via_boleto_node(state: MultiAgentState) -> dict:
-    step = state["flow_step"]
+    step = state.get("flow_step")
 
     if step is None:
         return {

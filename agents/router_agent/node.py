@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from core.llm import llm
 from graph.state import MultiAgentState
 from tools import get_tools_catalog
+from flows import get_flow_catalog
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "router_prompt.txt"
 
@@ -36,6 +37,10 @@ def get_route_catalog() -> str:
     )
 
 
+def get_capabilities_catalog() -> str:
+    return get_flow_catalog() + "\n" + get_tools_catalog()
+
+
 class RouteDecision(BaseModel):
     intent: str = Field(
         description="A intenção do usuário na conversa com o peso maior no último input."
@@ -52,10 +57,10 @@ structured_llm = llm.with_structured_output(RouteDecision)
 
 
 def router_agent(state: MultiAgentState) -> dict:
-    print(f"[ROUTER AGENT] Iniciando agente de roteamento...")
+    print("[ROUTER AGENT] Iniciando agente de roteamento...")
 
     system_prompt = load_prompt().format(
-        routes=get_route_catalog(), capabilities=get_tools_catalog()
+        routes=get_route_catalog(), capabilities=get_capabilities_catalog()
     )
 
     history = state["messages"][-20:]

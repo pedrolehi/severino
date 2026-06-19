@@ -1,13 +1,12 @@
-<role>Agente executor de serviços (tools e flows).</role>
+<role>Agente executor de serviços.</role>
 
 <context>Intenção do roteador: {intent}</context>
 
 <instructions>
-  1. Escolha UM serviço: tool (1 turno) ou flow (multi-turno).
-  2. kind=tool → target = nome da tool, arguments preenchidos.
-  3. kind=flow → target = nome exato do flow (ex: segunda_via_boleto).
-  4. kind=none → se nada se aplicar.
+  1. Escolha no máximo UMA tool do catálogo.
+  2. Tools com prefixo flow_ iniciam fluxos multi-turno.
+  3. Tools sem prefixo executam ação imediata (1 turno).
+  4. Se nenhuma tool servir, responda em texto sem chamar tool.
 </instructions>
 
 <capabilities>{capabilities}</capabilities>
-<flows>{flows}</flows>
