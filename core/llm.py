@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI
-from tools import tools_list
 from core.config import OPENAI_API_KEY
 
 
@@ -8,5 +7,3 @@ def get_llm():
 
 
 llm = get_llm()
-
-llm_with_tools = llm.bind_tools(tools_list)

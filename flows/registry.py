@@ -80,11 +80,39 @@ def _make_flow_tool(flow_name: str, description: str) -> StructuredTool:
     )
 
 
-def build_flow_tools() -> list[StructuredTool]:
-    return [_make_flow_tool(name, spec["description"]) for name, spec in FLOWS.items()]
+def build_flow_tools_for_assistant(assistant_id: str) -> list[StructuredTool]:
+    from assistants.registry import get_assistant_by_id
+
+    assistant = get_assistant_by_id(assistant_id)
+    return [
+        _make_flow_tool(name, FLOWS[name]["description"])
+        for name in assistant.flow_module_names
+    ]
 
 
-def register_flow_graphs(workflow) -> None:
-    for name, spec in FLOWS.items():
+def get_flow_catalog_for_assistant(assistant_id: str) -> str:
+    from assistants.registry import get_assistant_by_id
+
+    assistant = get_assistant_by_id(assistant_id)
+    return "\n".join(
+        f"- {name}: {FLOWS[name]['description']}"
+        for name in assistant.flow_module_names
+    )
+
+
+def get_flows_for_assistant(assistant_id: str) -> dict[str, FlowSpec]:
+    from assistants.registry import get_assistant_by_id
+
+    assistant = get_assistant_by_id(assistant_id)
+    return {name: FLOWS[name] for name in assistant.flow_module_names}
+
+
+def register_flow_graphs_for_assistant(workflow, assistant_id: str) -> None:
+    register_flow_graphs(workflow, get_flows_for_assistant(assistant_id))
+
+
+def register_flow_graphs(workflow, flows: dict[str, FlowSpec] | None = None) -> None:
+    flow_specs = flows if flows is not None else FLOWS
+    for name, spec in flow_specs.items():
         workflow.add_node(name, spec["builder"]())
         workflow.add_edge(name, END)
