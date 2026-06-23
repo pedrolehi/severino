@@ -1,19 +1,18 @@
 from langgraph.graph import END
 from graph.state import MultiAgentState
-from flows.registry import FLOWS
 
 
-def build_service_caller_edges() -> dict:
+def build_service_caller_edges(flow_names: str) -> dict:
     edges = {"tools": "tools_node", "end": END}
-    for name in FLOWS:
+    for name in flow_names:
         edges[name] = name
     return edges
 
 
-def route_from_service_caller(state: MultiAgentState):
+def route_from_service_caller(state: MultiAgentState, allowed_flows: str) -> str:
     target = state.get("service_target")
 
-    if target and target in FLOWS:
+    if target and target in allowed_flows:
         return target
 
     last_message = state["messages"][-1]
@@ -21,6 +20,3 @@ def route_from_service_caller(state: MultiAgentState):
         return "tools"
 
     return "end"
-
-
-SERVICE_CALLER_EDGES = build_service_caller_edges()

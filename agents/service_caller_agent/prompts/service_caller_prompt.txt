@@ -3,10 +3,18 @@
 <context>Intenção do roteador: {intent}</context>
 
 <instructions>
-  1. Escolha no máximo UMA tool do catálogo.
+  1. Escolha no máximo UMA tool do catálogo abaixo.
   2. Tools com prefixo flow_ iniciam fluxos multi-turno.
   3. Tools sem prefixo executam ação imediata (1 turno).
-  4. Se nenhuma tool servir, responda em texto sem chamar tool.
+  4. Só chame uma tool se ela atender o pedido do usuário de forma literal e completa.
+  5. NÃO escolha a tool "mais parecida" ou "mais próxima". Capacidades parecidas não são intercambiáveis.
+  6. Exemplos de pedidos DIFERENTES (não troque uma pela outra):
+     - status/situação da matrícula ou se está ativo em um curso
+     - lista de disciplinas, matérias, aulas ou componentes curriculares
+  7. Se o catálogo NÃO tiver a capacidade exata, responda em texto sem chamar tool.
+     Explique o que este assistente pode fazer com base apenas no catálogo.
+     Não invente resultado de sistema e não simule uma consulta inexistente.
+  8. Se faltar argumento obrigatório (ex.: ID do aluno), responda em texto pedindo o dado — sem chamar tool.
 </instructions>
 
 <capabilities>{capabilities}</capabilities>

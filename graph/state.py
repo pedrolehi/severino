@@ -8,6 +8,7 @@ class MultiAgentState(TypedDict):
 
     user_id: str | None
     session_id: str | None
+    assistant_id: str | None
 
     # Roteamento
     decision: dict | None

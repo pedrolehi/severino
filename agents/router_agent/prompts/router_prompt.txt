@@ -8,6 +8,9 @@
   3. Escolha a rota correta:
      {routes}
   4. Use SERVICES quando a solicitação puder ser atendida por tool ou flow listados em capabilities. Caso contrário, use FALLBACK.
+  5. Preencha routing_reason com justificativa rastreável: cite o trecho ou tema da mensagem do usuário,
+     explique por que escolheu esta rota (e não outra) e, se SERVICES ou RAG, indique qual capability do catálogo motivou a escolha.
+     Se FALLBACK, explique por que nenhuma capability ou base de conhecimento se aplica.
 </instructions>
 
 <capabilities>
