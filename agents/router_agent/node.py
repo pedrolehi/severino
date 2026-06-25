@@ -23,9 +23,18 @@ class Route(str, Enum):
 
 
 ROUTE_DESCRIPTIONS: dict[Route, str] = {
-    Route.RAG: "RAG - busca em base de conhecimento",
-    Route.SERVICES: "SERVICES - fluxos de serviços e consultas a sistemas de acordo com as capacidades listadas",
-    Route.FALLBACK: "FALLBACK - conversa geral ou caso não haja capacidade compatível",
+    Route.RAG: (
+        "RAG - perguntas informativas (como fazer, políticas, procedimentos, documentação). "
+        "Use quando o usuário quer saber/como proceder, sem tool ou flow correspondente."
+    ),
+    Route.SERVICES: (
+        "SERVICES - executar ação via tool ou flow listada em capabilities "
+        "(ex.: boleto, consulta de status)"
+    ),
+    Route.FALLBACK: (
+        "FALLBACK - cumprimentos, conversa geral ou assunto fora do escopo "
+        "(não é dúvida informativa nem serviço listado)"
+    ),
 }
 
 
@@ -48,9 +57,10 @@ class RouteDecision(BaseModel):
     )
     routing_reason: str = Field(
         description=(
-            "Justificativa objetiva da rota escolhida: por que esta rota e não outra, "
-            "citando a mensagem do usuário e, se SERVICES/RAG, qual capability do catálogo "
-            "seria usada ou por que não há capability compatível (FALLBACK)."
+            "Justificativa objetiva da rota escolhida: cite a mensagem do usuário. "
+            "SERVICES: qual tool/flow do catálogo. "
+            "RAG: por que é pergunta informativa/procedimento (mesmo sem tool). "
+            "FALLBACK: por que não é informação nem serviço."
         ),
         min_length=10,
     )

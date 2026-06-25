@@ -1,4 +1,4 @@
-from assistants.assistant_contract import define_assistant
+from assistants.assistant_contract import RagBinding, define_assistant
 
 ASSISTANT = define_assistant(
     id="portal_aluno",
@@ -6,5 +6,7 @@ ASSISTANT = define_assistant(
     description="Assistente virtual do portal do aluno Senac",
     tool_module_names=["portal"],
     flow_module_names=[],
-    rag_collection_id={"hml": "", "prod": "", "dev": ""},
+    rag=RagBinding(
+        project_id="portal_aluno",
+    ),
 )

@@ -5,14 +5,21 @@
 <instructions>
   1. Analise o histórico com peso maior na última mensagem do usuário.
   2. Identifique a intenção do usuário.
-  3. Escolha a rota correta:
+  3. Escolha UMA rota entre:
      {routes}
-  4. Use SERVICES quando a solicitação puder ser atendida por tool ou flow listados em capabilities. Caso contrário, use FALLBACK.
-  5. Preencha routing_reason com justificativa rastreável: cite o trecho ou tema da mensagem do usuário,
-     explique por que escolheu esta rota (e não outra) e, se SERVICES ou RAG, indique qual capability do catálogo motivou a escolha.
-     Se FALLBACK, explique por que nenhuma capability ou base de conhecimento se aplica.
+  4. Regras de decisão (siga nesta ordem):
+     a) SERVICES — somente se o usuário quer EXECUTAR uma ação transacional coberta por uma tool ou flow listada em <capabilities> (ex.: emitir boleto, consultar status de matrícula). Deve haver match explícito com item do catálogo.
+     b) RAG — perguntas informativas: como fazer, políticas, procedimentos, prazos, direitos, documentação, dúvidas sobre intranet/RH/benefícios/processos. O usuário busca INFORMAÇÃO, não execução de serviço. Use RAG mesmo quando NÃO existir tool/flow para o tema.
+     c) FALLBACK — cumprimentos, conversa social, fora de escopo, ou pedido que não é informação nem serviço listado (ex.: "bom dia", piadas, assuntos sem relação com o assistente).
+  5. NÃO use FALLBACK só porque não há capability em <capabilities>. Ausência de tool/flow para o tema é candidato a RAG, não a FALLBACK.
+  6. Preencha routing_reason citando a mensagem do usuário e por que RAG vs SERVICES vs FALLBACK.
 </instructions>
 
 <capabilities>
+  Apenas para rota SERVICES (execução). Não liste aqui temas de base de conhecimento.
 {capabilities}
 </capabilities>
+
+<rag_scope>
+  Base de conhecimento disponível via RAG: documentação e procedimentos do assistente (ex.: férias, benefícios, políticas internas, normas, passo a passo). Perguntas "como...", "onde...", "quais são...", "preciso de..." sobre processos → RAG.
+</rag_scope>

@@ -31,9 +31,14 @@ class AssistantCapabilities:
     def router_catalog(self) -> str:
         flows_text = get_flow_catalog_for_assistant(self.assistant_id)
         tools_text = self.tools_catalog()
-        if flows_text and tools_text:
-            return f"{flows_text}\n{tools_text}"
-        return flows_text or tools_text
+        service_lines = []
+        if flows_text:
+            service_lines.append(flows_text)
+        if tools_text:
+            service_lines.append(tools_text)
+        if not service_lines:
+            service_lines.append("(nenhuma tool ou flow registrada)")
+        return "\n".join(service_lines)
 
 
 def _load_tools_from_modules(module_names: list[str]) -> list[BaseTool]:
