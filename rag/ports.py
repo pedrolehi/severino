@@ -10,6 +10,14 @@ class RetrievedChunk:
     metadata: dict
 
 
+@dataclass(frozen=True, slots=True)
+class RagRunResult:
+    answer: str
+    query: str
+    collection_name: str
+    chunks: tuple[RetrievedChunk, ...]
+
+
 class VectorSearchPort(Protocol):
     def search(
         self,

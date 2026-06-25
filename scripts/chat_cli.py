@@ -1,3 +1,5 @@
+import _bootstrap  # noqa: F401
+
 import argparse
 import uuid
 
@@ -5,6 +7,7 @@ from langchain_core.messages import HumanMessage
 
 from assistants.registry import get_assistant_by_id, list_assistant_ids
 from core.hub import build_thread_id, get_graph
+from rag.pipeline import format_chunks_debug, run_rag_for_assistant_id
 
 
 def parse_args() -> argparse.Namespace:
@@ -19,6 +22,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Lista assistants disponíveis",
     )
+    parser.add_argument(
+        "--rag-debug",
+        action="store_true",
+        help="Modo debug RAG: resposta + chunks recuperados (sem router)",
+    )
+    parser.add_argument(
+        "--truncate",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Com --rag-debug: limita preview de cada chunk a N caracteres",
+    )
     return parser.parse_args()
 
 
@@ -31,6 +46,37 @@ def main() -> None:
         return
 
     get_assistant_by_id(args.assistant)
+
+    if args.rag_debug:
+        print(f"RAG debug | assistant={args.assistant}")
+        print("Digite a pergunta. (sair / exit / quit para encerrar)")
+
+        while True:
+            try:
+                user_input = input("You: ").strip()
+            except (KeyboardInterrupt, EOFError):
+                print("\nExiting...")
+                break
+
+            if not user_input:
+                continue
+            if user_input.lower() in {"sair", "exit", "quit"}:
+                break
+
+            rag_result = run_rag_for_assistant_id(
+                assistant_id=args.assistant,
+                query=user_input,
+            )
+            print(f"Assistant: {rag_result.answer}")
+            print(
+                format_chunks_debug(
+                    list(rag_result.chunks),
+                    collection_name=rag_result.collection_name,
+                    truncate=args.truncate,
+                )
+            )
+        return
+
     graph = get_graph(args.assistant)
 
     session_id = str(uuid.uuid4())

@@ -16,8 +16,8 @@ def rag_agent(state: MultiAgentState) -> dict:
     query = last_message.content if isinstance(last_message.content, str) else str(last_message.content)
     print(f"[RAG Agent] assistant={assistant_id}, query={query[:80]!r}...")
 
-    answer = run_rag_for_assistant_id(assistant_id=assistant_id, query=query)
-    return {"messages": [AIMessage(content=answer)]}
+    result = run_rag_for_assistant_id(assistant_id=assistant_id, query=query)
+    return {"messages": [AIMessage(content=result.answer)]}
 
 
 def fallback_agent(state: MultiAgentState):
