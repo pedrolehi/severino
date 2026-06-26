@@ -10,8 +10,8 @@ from core.config import APP_ENV
 from core.llm import llm
 from rag.adapters.search_vectory import SearchVectoryAdapter
 from rag.policy import RagPolicy, resolve_rag_policy
-from rag.citations import build_citations
-from rag.ports import RagRunResult, RetrievedChunk
+from rag.citations import build_citations, chunks_to_retrieval_payload
+from rag.ports import RetrievedChunk
 from rag.project_store import resolve_collection_name
 from rag.scoring import passes_similarity_threshold
 from rag.subgraph.models import JudgeVerdictModel
@@ -35,17 +35,20 @@ def _chunk_to_dict(chunk: RetrievedChunk) -> dict[str, Any]:
         "content": chunk.content,
         "score": chunk.score,
         "similarity": chunk.similarity,
+        "adjusted_score": chunk.adjusted_score,
         "metadata": chunk.metadata,
     }
 
 
 def _chunk_from_dict(data: dict[str, Any]) -> RetrievedChunk:
+    adjusted = data.get("adjusted_score")
     return RetrievedChunk(
         id=str(data.get("id", "")),
         content=str(data.get("content", "")),
         score=float(data.get("score", 0)),
         metadata=dict(data.get("metadata") or {}),
         similarity=float(data.get("similarity", 0)),
+        adjusted_score=float(adjusted) if adjusted is not None else None,
     )
 
 
@@ -69,6 +72,74 @@ def _format_context(chunks: list[RetrievedChunk]) -> str:
 
 def _read_prompt(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _judge_rejection_code(verdict: dict[str, Any]) -> str | None:
+    if verdict.get("action") != "fallback":
+        return None
+    return "ungrounded" if not verdict.get("grounded") else "low_quality"
+
+
+def _build_rag_result_payload(
+    state: RagSubgraphState,
+    *,
+    draft_answer: str | None = None,
+    verdict: dict[str, Any] | None = None,
+    fallback_reason: str | None = None,
+    fallback_hint: str | None = None,
+) -> dict[str, Any]:
+    chunks = [_chunk_from_dict(item) for item in (state.get("chunks") or [])]
+    attempt = int(state.get("search_attempt") or 0) + 1
+    query = (state.get("query") or "").strip()
+    search_query = (state.get("search_query") or query).strip()
+    verdict = verdict or state.get("judge_verdict") or {}
+    judge_action = str(verdict["action"]) if verdict.get("action") else None
+
+    rag_result: dict[str, Any] = {
+        "query": query,
+        "collection_name": state.get("collection_name") or "",
+        "search_attempts": attempt,
+        "judge_action": judge_action,
+        "retrieval_metrics": state.get("retrieval_metrics"),
+        "retrieved_chunk_count": len(chunks),
+        "top_k": chunks_to_retrieval_payload(chunks),
+    }
+
+    if search_query.lower() != query.lower():
+        rag_result["retrieval_query"] = search_query
+
+    if draft_answer:
+        rag_result["draft_answer"] = draft_answer
+        rag_result["citations"] = build_citations(draft_answer, chunks)
+
+    if judge_action == "fallback":
+        rag_result["judge"] = {
+            "grounded": verdict.get("grounded"),
+            "answers_question": verdict.get("answers_question"),
+            "confidence": verdict.get("confidence"),
+            "issues": list(verdict.get("issues") or []),
+            "fallback_hint": verdict.get("fallback_hint"),
+            "rejection_code": _judge_rejection_code(verdict),
+        }
+    elif judge_action == "accept":
+        rag_result["judge"] = {
+            "grounded": verdict.get("grounded", True),
+            "answers_question": verdict.get("answers_question", True),
+            "confidence": verdict.get("confidence"),
+            "issues": list(verdict.get("issues") or []),
+        }
+
+    resolved_fallback = fallback_reason or state.get("fallback_reason")
+    resolved_hint = (
+        fallback_hint if fallback_hint is not None else state.get("fallback_hint")
+    )
+    if resolved_fallback and str(resolved_fallback).startswith("rag_retrieval:"):
+        rag_result["retrieval_failure"] = {
+            "reason": resolved_fallback,
+            "hint": resolved_hint,
+        }
+
+    return rag_result
 
 
 def prepare_query(state: RagSubgraphState) -> dict[str, Any]:
@@ -113,12 +184,8 @@ def retrieve(state: RagSubgraphState) -> dict[str, Any]:
     )
 
     metrics = {
-        "top_score": top_score,
+        "top_distance": top_score,
         "top_similarity": top_similarity,
-        "chunk_count": len(chunks),
-        "collection_name": collection_name,
-        "search_query": search_query,
-        "search_attempt": attempt,
     }
 
     return {
@@ -148,6 +215,11 @@ def retrieval_gate(state: RagSubgraphState) -> dict[str, Any]:
             "fallback_reason": "rag_retrieval:no_results",
             "fallback_source": "rag_retrieval",
             "fallback_hint": "Não há trechos indexados para esta pergunta.",
+            "rag_result": _build_rag_result_payload(
+                state,
+                fallback_reason="rag_retrieval:no_results",
+                fallback_hint="Não há trechos indexados para esta pergunta.",
+            ),
         }
 
     top = chunks[0]
@@ -168,6 +240,13 @@ def retrieval_gate(state: RagSubgraphState) -> dict[str, Any]:
             "fallback_source": "rag_retrieval",
             "fallback_hint": (
                 "Os trechos recuperados não parecem relevantes o suficiente."
+            ),
+            "rag_result": _build_rag_result_payload(
+                state,
+                fallback_reason="rag_retrieval:low_similarity",
+                fallback_hint=(
+                    "Os trechos recuperados não parecem relevantes o suficiente."
+                ),
             ),
         }
 
@@ -258,12 +337,21 @@ def judge(state: RagSubgraphState) -> dict[str, Any]:
 
     result: dict[str, Any] = {"judge_verdict": verdict.model_dump()}
     if verdict.action == "fallback":
+        fallback_reason = "rag_judge:" + (
+            "ungrounded" if not verdict.grounded else "low_quality"
+        )
         result.update(
             {
-                "fallback_reason": "rag_judge:"
-                + ("ungrounded" if not verdict.grounded else "low_quality"),
+                "fallback_reason": fallback_reason,
                 "fallback_source": "rag_judge",
                 "fallback_hint": verdict.fallback_hint,
+                "rag_result": _build_rag_result_payload(
+                    state,
+                    draft_answer=state.get("draft_answer"),
+                    verdict=verdict.model_dump(),
+                    fallback_reason=fallback_reason,
+                    fallback_hint=verdict.fallback_hint,
+                ),
             }
         )
     elif verdict.action == "retry_search":
@@ -273,7 +361,6 @@ def judge(state: RagSubgraphState) -> dict[str, Any]:
 
 
 def rewrite_query(state: RagSubgraphState) -> dict[str, Any]:
-    policy = _load_policy(state)
     attempt = int(state.get("search_attempt") or 0) + 1
     previous_query = (state.get("search_query") or state.get("query") or "").strip()
     verdict = state.get("judge_verdict") or {}
@@ -310,36 +397,18 @@ def rewrite_query(state: RagSubgraphState) -> dict[str, Any]:
 
 
 def pack_response(state: RagSubgraphState) -> dict[str, Any]:
-    chunks = tuple(
-        _chunk_from_dict(item) for item in (state.get("chunks") or [])
-    )
-    attempt = int(state.get("search_attempt") or 0) + 1
     verdict = state.get("judge_verdict") or {}
-
-    result = RagRunResult(
-        answer=state.get("draft_answer") or "",
-        query=(state.get("query") or "").strip(),
-        collection_name=state.get("collection_name") or "",
-        chunks=chunks,
-        search_attempts=attempt,
-        judge_action=str(verdict.get("action")) if verdict else None,
-        retrieval_metrics=state.get("retrieval_metrics"),
-    )
-    citations = build_citations(result.answer, list(chunks))
+    draft_answer = (state.get("draft_answer") or "").strip()
 
     from langchain_core.messages import AIMessage
 
     return {
-        "rag_result": {
-            "query": result.query,
-            "collection_name": result.collection_name,
-            "search_attempts": result.search_attempts,
-            "judge_action": result.judge_action,
-            "retrieval_metrics": result.retrieval_metrics,
-            "retrieved_chunk_count": len(result.chunks),
-            "citations": citations,
-        },
-        "messages": [AIMessage(content=result.answer)],
+        "rag_result": _build_rag_result_payload(
+            state,
+            draft_answer=draft_answer,
+            verdict=verdict,
+        ),
+        "messages": [AIMessage(content=draft_answer)],
     }
 
 

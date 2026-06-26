@@ -43,19 +43,25 @@ class SearchVectoryAdapter:
 
         chunks: list[RetrievedChunk] = []
         for item in body.get("results") or []:
-            distance_score = float(
-                item.get("adjusted_score")
-                if item.get("adjusted_score") is not None
+            raw_distance = float(
+                item.get("distance")
+                if item.get("distance") is not None
                 else item.get("score")
-                or 0
+                if item.get("score") is not None
+                else 1.0
+            )
+            adjusted_raw = item.get("adjusted_score")
+            adjusted_score = (
+                float(adjusted_raw) if adjusted_raw is not None else None
             )
             chunks.append(
                 RetrievedChunk(
                     id=str(item.get("id", "")),
                     content=str(item.get("content", "")),
-                    score=distance_score,
+                    score=raw_distance,
                     metadata=dict(item.get("metadata") or {}),
-                    similarity=distance_to_similarity(distance_score),
+                    similarity=distance_to_similarity(raw_distance),
+                    adjusted_score=adjusted_score,
                 )
             )
         return chunks

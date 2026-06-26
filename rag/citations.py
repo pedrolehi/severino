@@ -55,7 +55,16 @@ def chunk_to_citation_payload(chunk: RetrievedChunk, *, index: int) -> dict[str,
         "document_path": document_path,
         "document_url": build_document_download_url(document_path),
         "similarity": chunk.similarity,
+        "distance": chunk.score,
+        "adjusted_score": chunk.adjusted_score,
     }
+
+
+def chunks_to_retrieval_payload(chunks: list[RetrievedChunk]) -> list[dict[str, Any]]:
+    return [
+        chunk_to_citation_payload(chunk, index=index)
+        for index, chunk in enumerate(chunks, start=1)
+    ]
 
 
 def find_marker_positions(answer: str) -> dict[int, list[int]]:

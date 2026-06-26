@@ -29,6 +29,7 @@ class ChatResponse(BaseModel):
     route: str | None = None
     fallback_reason: str | None = None
     fallback_source: str | None = None
+    fallback_hint: str | None = None
     rag_result: dict[str, Any] | None = None
 
 
@@ -88,6 +89,7 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
         route=route,
         fallback_reason=result.get("fallback_reason"),
         fallback_source=result.get("fallback_source"),
+        fallback_hint=result.get("fallback_hint"),
         rag_result=result.get("rag_result"),
     )
 

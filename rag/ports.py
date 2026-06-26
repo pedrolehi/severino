@@ -6,19 +6,16 @@ from typing import Any, Literal, Protocol
 class RetrievedChunk:
     id: str
     content: str
-    score: float
+    score: float  # distância L2 Milvus (menor = melhor)
     metadata: dict
     similarity: float
+    adjusted_score: float | None = None  # pós-rerank vectory (pode ser 0 por clamp)
 
 
 @dataclass(frozen=True, slots=True)
 class RetrievalMetrics:
-    top_score: float
+    top_distance: float
     top_similarity: float
-    chunk_count: int
-    collection_name: str
-    search_query: str
-    search_attempt: int
 
 
 @dataclass(frozen=True, slots=True)
