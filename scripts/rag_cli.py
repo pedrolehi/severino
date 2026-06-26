@@ -57,7 +57,7 @@ def run_query(
         return
 
     rag_result = final_state.get("rag_result") or {}
-    print(f"Assistant: {rag_result.get('answer', '')}")
+    print(f"Assistant: {final_state.get('draft_answer') or ''}")
     chunks = [
         {
             "id": c.get("id"),

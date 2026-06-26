@@ -76,7 +76,7 @@ def main() -> None:
                 continue
 
             rag_result = final_state.get("rag_result") or {}
-            print(f"Assistant: {rag_result.get('answer', '')}")
+            print(f"Assistant: {final_state.get('draft_answer') or ''}")
             parsed_chunks = [
                 RetrievedChunk(
                     id=str(item.get("id", "")),

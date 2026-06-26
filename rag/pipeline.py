@@ -93,8 +93,17 @@ def run_rag(
     chunks = tuple(
         _chunk_from_dict(item) for item in (final_state.get("chunks") or [])
     )
+    answer = str(final_state.get("draft_answer") or "")
+    if not answer:
+        messages = final_state.get("messages") or []
+        for message in reversed(messages):
+            content = getattr(message, "content", None)
+            if content:
+                answer = str(content)
+                break
+
     return RagRunResult(
-        answer=str(rag_result.get("answer") or ""),
+        answer=answer,
         query=query.strip(),
         collection_name=str(
             rag_result.get("collection_name")

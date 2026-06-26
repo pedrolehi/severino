@@ -10,7 +10,7 @@ from core.config import APP_ENV
 from core.llm import llm
 from rag.adapters.search_vectory import SearchVectoryAdapter
 from rag.policy import RagPolicy, resolve_rag_policy
-from rag.citations import build_citations, chunks_to_payloads
+from rag.citations import build_citations
 from rag.ports import RagRunResult, RetrievedChunk
 from rag.project_store import resolve_collection_name
 from rag.scoring import passes_similarity_threshold
@@ -325,24 +325,20 @@ def pack_response(state: RagSubgraphState) -> dict[str, Any]:
         judge_action=str(verdict.get("action")) if verdict else None,
         retrieval_metrics=state.get("retrieval_metrics"),
     )
-    chunk_payloads = chunks_to_payloads(list(chunks))
     citations = build_citations(result.answer, list(chunks))
 
     from langchain_core.messages import AIMessage
 
     return {
         "rag_result": {
-            "answer": result.answer,
             "query": result.query,
             "collection_name": result.collection_name,
             "search_attempts": result.search_attempts,
             "judge_action": result.judge_action,
             "retrieval_metrics": result.retrieval_metrics,
-            "chunk_count": len(result.chunks),
-            "chunks": chunk_payloads,
+            "retrieved_chunk_count": len(result.chunks),
             "citations": citations,
         },
-        "citations": citations,
         "messages": [AIMessage(content=result.answer)],
     }
 

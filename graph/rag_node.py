@@ -27,7 +27,6 @@ def rag_subgraph_node(state: MultiAgentState) -> dict:
         "search_history": result.get("search_history"),
         "collection_name": result.get("collection_name"),
         "chunks": result.get("chunks"),
-        "citations": result.get("citations"),
         "retrieval_metrics": result.get("retrieval_metrics"),
         "rag_result": result.get("rag_result"),
         "fallback_reason": result.get("fallback_reason"),
