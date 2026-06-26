@@ -25,6 +25,7 @@ class MultiAgentState(TypedDict):
     search_history: list[dict[str, Any]] | None
     collection_name: str | None
     chunks: list[dict[str, Any]] | None
+    citations: list[dict[str, Any]] | None
     retrieval_metrics: dict[str, Any] | None
     rag_result: dict[str, Any] | None
     fallback_reason: str | None

@@ -29,6 +29,8 @@ class ChatResponse(BaseModel):
     route: str | None = None
     fallback_reason: str | None = None
     fallback_source: str | None = None
+    chunks: list[dict[str, Any]] | None = None
+    citations: list[dict[str, Any]] | None = None
     rag_result: dict[str, Any] | None = None
 
 
@@ -81,6 +83,10 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
     decision = result.get("decision") or {}
     route = decision.get("route")
 
+    rag_result = result.get("rag_result") or {}
+    chunks = rag_result.get("chunks") or result.get("chunks")
+    citations = rag_result.get("citations") or result.get("citations")
+
     return ChatResponse(
         assistant_id=request.assistant_id,
         session_id=session_id,
@@ -88,7 +94,9 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
         route=route,
         fallback_reason=result.get("fallback_reason"),
         fallback_source=result.get("fallback_source"),
-        rag_result=result.get("rag_result"),
+        chunks=chunks,
+        citations=citations,
+        rag_result=rag_result or None,
     )
 
 
