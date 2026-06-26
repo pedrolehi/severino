@@ -1,47 +1,96 @@
-import uvicorn
-from fastapi import FastAPI
-from pydantic import BaseModel
+import uuid
 from typing import Any
-from langchain_core.messages import HumanMessage
-from graph.builder import app_graph
 
+import uvicorn
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from langchain_core.messages import AIMessage, HumanMessage
+from pydantic import BaseModel, Field
 
-class AgentContext(BaseModel):
-    user_id: str
-    session_id: str | None = None
-    context: dict[str, Any] | None = None
+from assistants.registry import get_assistant_by_id, list_assistant_ids
+from core.hub import build_thread_id, get_graph
+
+load_dotenv()
+
+app = FastAPI(title="from-scratch-multiagent API")
 
 
 class ChatRequest(BaseModel):
-    message: str
-    context: AgentContext | None = None
+    message: str = Field(..., min_length=1)
+    assistant_id: str = "intranet"
+    user_id: str | None = None
+    session_id: str | None = None
 
 
-app = FastAPI(title="Meu multiagent API")
+class ChatResponse(BaseModel):
+    assistant_id: str
+    session_id: str
+    response: str
+    route: str | None = None
+    fallback_reason: str | None = None
+    fallback_source: str | None = None
+    rag_result: dict[str, Any] | None = None
 
 
 @app.get("/")
-def read_root():
-    return {"message": "Health check ok!"}
+def read_root() -> dict[str, str]:
+    return {"status": "ok", "service": "from-scratch-multiagent"}
 
 
-@app.post("/chat")
-def chat_endpoint(request: ChatRequest):
-    user_msg = request.message
-    user_id = request.context.user_id if request.context else None
-    session_id = request.context.session_id if request.context else None
+@app.get("/assistants")
+def list_assistants() -> dict[str, list[str]]:
+    return {"assistants": list_assistant_ids()}
 
-    config = {"configurable": {"thread_id": session_id}}
 
-    initial_state = {"messages": [HumanMessage(content=user_msg)], "user_id": user_id}
+@app.post("/chat", response_model=ChatResponse)
+def chat_endpoint(request: ChatRequest) -> ChatResponse:
+    try:
+        get_assistant_by_id(request.assistant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    print(f"Iniciando o fluxo com o estado inicial: {initial_state}")
-    result = app_graph.invoke(initial_state, config=config)
+    session_id = request.session_id or str(uuid.uuid4())
+    graph = get_graph(request.assistant_id)
+    config = {
+        "configurable": {
+            "thread_id": build_thread_id(request.assistant_id, session_id),
+        }
+    }
 
-    final_message = result["messages"][-1].content
+    result = graph.invoke(
+        {
+            "assistant_id": request.assistant_id,
+            "user_id": request.user_id,
+            "session_id": session_id,
+            "messages": [HumanMessage(content=request.message)],
+        },
+        config=config,
+    )
 
-    return {"agent": "Chat Agent", "response": final_message}
+    messages = result.get("messages") or []
+    last_ai = next(
+        (message for message in reversed(messages) if isinstance(message, AIMessage)),
+        None,
+    )
+    if last_ai is None:
+        raise HTTPException(status_code=500, detail="Grafo não retornou mensagem do assistente")
+
+    content = last_ai.content
+    response_text = content if isinstance(content, str) else str(content)
+
+    decision = result.get("decision") or {}
+    route = decision.get("route")
+
+    return ChatResponse(
+        assistant_id=request.assistant_id,
+        session_id=session_id,
+        response=response_text,
+        route=route,
+        fallback_reason=result.get("fallback_reason"),
+        fallback_source=result.get("fallback_source"),
+        rag_result=result.get("rag_result"),
+    )
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

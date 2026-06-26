@@ -1,59 +1,61 @@
-import json
-from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from __future__ import annotations
 
-from core.config import SEARCH_VECTORY_URL
-from rag.config import RAG_ENABLE_RERANKING
+from rag.http_client import VectoryHttpError, post_json
+from rag.policy import SearchPolicy
 from rag.ports import RetrievedChunk
+from rag.scoring import distance_to_similarity
 
 
 class SearchVectoryAdapter:
     def __init__(self, base_url: str | None = None) -> None:
-        self._base_url = (base_url or SEARCH_VECTORY_URL).rstrip("/")
+        self._base_url = base_url
 
     def search(
         self,
         *,
         query: str,
         collection_name: str,
-        top_k: int,
+        search_policy: SearchPolicy,
     ) -> list[RetrievedChunk]:
-        url = f"{self._base_url}/vector-search"
         payload = {
             "query": query,
             "collection_name": collection_name,
-            "top_k": top_k,
-            "enable_reranking": RAG_ENABLE_RERANKING,
+            "top_k": search_policy.top_k,
+            "search_buffer": search_policy.search_buffer,
+            "enable_reranking": search_policy.enable_reranking,
+            "reranker_mode": search_policy.reranker_mode,
+            "use_hybrid_search": search_policy.use_hybrid_search,
+            "enable_query_expansion": search_policy.enable_query_expansion,
+            "return_full_metadata": True,
         }
-        request = Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            method="POST",
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-            },
-        )
+
         try:
-            with urlopen(request, timeout=60) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise ValueError(
-                f"Erro na busca vetorial ({exc.code}): {detail}"
-            ) from exc
+            body = post_json(
+                "vector-search",
+                payload,
+                base_url=self._base_url,
+            )
+        except VectoryHttpError as exc:
+            raise ValueError(exc.detail) from exc
 
         if not body.get("success"):
             raise ValueError(body.get("error") or "Busca vetorial falhou")
 
         chunks: list[RetrievedChunk] = []
         for item in body.get("results") or []:
+            distance_score = float(
+                item.get("adjusted_score")
+                if item.get("adjusted_score") is not None
+                else item.get("score")
+                or 0
+            )
             chunks.append(
                 RetrievedChunk(
                     id=str(item.get("id", "")),
                     content=str(item.get("content", "")),
-                    score=float(item.get("adjusted_score") or item.get("score") or 0),
+                    score=distance_score,
                     metadata=dict(item.get("metadata") or {}),
+                    similarity=distance_to_similarity(distance_score),
                 )
             )
         return chunks

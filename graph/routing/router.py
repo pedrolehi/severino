@@ -2,7 +2,7 @@ from graph.state import MultiAgentState
 from agents.router_agent.node import Route, RouteDecision
 
 ROUTER_ROUTE_TO_NODE = {
-    Route.RAG: "rag_agent",
+    Route.RAG: "rag_subgraph",
     Route.SERVICES: "service_caller_agent",
     Route.FALLBACK: "fallback_agent",
 }

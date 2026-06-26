@@ -7,7 +7,8 @@ from langchain_core.messages import HumanMessage
 
 from assistants.registry import get_assistant_by_id, list_assistant_ids
 from core.hub import build_thread_id, get_graph
-from rag.pipeline import format_chunks_debug, run_rag_for_assistant_id
+from rag.pipeline import format_chunks_debug, run_rag_subgraph
+from rag.ports import RetrievedChunk
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,15 +64,37 @@ def main() -> None:
             if user_input.lower() in {"sair", "exit", "quit"}:
                 break
 
-            rag_result = run_rag_for_assistant_id(
+            final_state = run_rag_subgraph(
                 assistant_id=args.assistant,
                 query=user_input,
             )
-            print(f"Assistant: {rag_result.answer}")
+            if final_state.get("fallback_reason"):
+                print(
+                    f"Fallback ({final_state.get('fallback_source')}): "
+                    f"{final_state.get('fallback_reason')}"
+                )
+                continue
+
+            rag_result = final_state.get("rag_result") or {}
+            print(f"Assistant: {rag_result.get('answer', '')}")
+            parsed_chunks = [
+                RetrievedChunk(
+                    id=str(item.get("id", "")),
+                    content=str(item.get("content", "")),
+                    score=float(item.get("score", 0)),
+                    metadata=dict(item.get("metadata") or {}),
+                    similarity=float(item.get("similarity", 0)),
+                )
+                for item in (final_state.get("chunks") or [])
+            ]
             print(
                 format_chunks_debug(
-                    list(rag_result.chunks),
-                    collection_name=rag_result.collection_name,
+                    parsed_chunks,
+                    collection_name=str(
+                        rag_result.get("collection_name")
+                        or final_state.get("collection_name")
+                        or ""
+                    ),
                     truncate=args.truncate,
                 )
             )

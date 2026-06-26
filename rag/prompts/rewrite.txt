@@ -1,0 +1,12 @@
+Reescreva a pergunta abaixo para melhorar a busca em uma base documental.
+
+Regras:
+- Mantenha o idioma português.
+- Use termos objetivos do domínio corporativo/intranet.
+- Não responda a pergunta; devolva só a query reformulada.
+- Uma linha, sem aspas.
+
+Motivo da nova tentativa: {retry_reason}
+Query anterior: {previous_query}
+
+Nova query:

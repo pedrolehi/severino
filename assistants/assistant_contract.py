@@ -4,6 +4,14 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True)
 class RagBinding:
     project_id: str
+    prompt_path: str | None = None
+    judge_prompt_path: str | None = None
+    fallback_prompt_path: str | None = None
+    search_top_k: int | None = None
+    search_buffer: int | None = None
+    use_hybrid_search: bool | None = None
+    max_search_attempts: int | None = None
+    min_similarity: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
