@@ -36,15 +36,7 @@ def build_rag_subgraph():
     workflow.add_edge("generate", "judge")
     workflow.add_conditional_edges(
         "judge",
-        lambda state: (
-            "pack_response"
-            if (state.get("judge_verdict") or {}).get("action") == "accept"
-            else (
-                "rewrite_query"
-                if (state.get("judge_verdict") or {}).get("action") == "retry_search"
-                else "mark_fallback"
-            )
-        ),
+        nodes.route_after_judge_node,
         {
             "pack_response": "pack_response",
             "rewrite_query": "rewrite_query",

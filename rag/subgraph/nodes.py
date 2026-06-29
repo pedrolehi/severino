@@ -13,7 +13,6 @@ from rag.policy import RagPolicy, resolve_rag_policy
 from rag.citations import build_citations, chunks_to_retrieval_payload
 from rag.ports import RetrievedChunk
 from rag.project_store import resolve_collection_name
-from rag.scoring import passes_similarity_threshold
 from rag.subgraph.models import JudgeVerdictModel
 from rag.subgraph.state import RagSubgraphState
 
@@ -228,38 +227,6 @@ def retrieval_gate(state: RagSubgraphState) -> dict[str, Any]:
             ),
         }
 
-    top = chunks[0]
-    if not passes_similarity_threshold(
-        top.distance,
-        policy.quality.min_similarity,
-        adjusted_score=top.adjusted_score,
-    ):
-        if attempt + 1 < max_attempts:
-            return {
-                "retry_reason": (
-                    f"Similaridade baixa ({top.similarity:.2f} < "
-                    f"{policy.quality.min_similarity:.2f})."
-                ),
-                "judge_verdict": {
-                    "action": "retry_search",
-                    "rewritten_query": None,
-                },
-            }
-        return {
-            "fallback_reason": "rag_retrieval:low_similarity",
-            "fallback_source": "rag_retrieval",
-            "fallback_hint": (
-                "Os trechos recuperados não parecem relevantes o suficiente."
-            ),
-            "rag_result": _build_rag_result_payload(
-                state,
-                fallback_reason="rag_retrieval:low_similarity",
-                fallback_hint=(
-                    "Os trechos recuperados não parecem relevantes o suficiente."
-                ),
-            ),
-        }
-
     return {"retry_reason": None, "judge_verdict": None}
 
 
@@ -404,6 +371,18 @@ def rewrite_query(state: RagSubgraphState) -> dict[str, Any]:
         "fallback_hint": None,
         "chunks": [],
     }
+
+
+def route_after_judge_node(state: RagSubgraphState) -> str:
+    verdict = state.get("judge_verdict") or {}
+    action = verdict.get("action")
+    if action == "accept":
+        return "pack_response"
+    if action == "fallback" and (state.get("draft_answer") or "").strip():
+        return "pack_response"
+    if action == "retry_search":
+        return "rewrite_query"
+    return "mark_fallback"
 
 
 def pack_response(state: RagSubgraphState) -> dict[str, Any]:
