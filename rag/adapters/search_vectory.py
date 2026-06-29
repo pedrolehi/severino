@@ -6,6 +6,17 @@ from rag.ports import RetrievedChunk
 from rag.scoring import distance_to_similarity
 
 
+def _resolve_milvus_distance(item: dict) -> float:
+    """Vectory expõe distância L2 em `score`; `distance` costuma vir 0.0 por default."""
+    score = item.get("score")
+    if score is not None:
+        return float(score)
+    distance = item.get("distance")
+    if distance is not None:
+        return float(distance)
+    return 1.0
+
+
 class SearchVectoryAdapter:
     def __init__(self, base_url: str | None = None) -> None:
         self._base_url = base_url
@@ -43,13 +54,7 @@ class SearchVectoryAdapter:
 
         chunks: list[RetrievedChunk] = []
         for item in body.get("results") or []:
-            raw_distance = float(
-                item.get("distance")
-                if item.get("distance") is not None
-                else item.get("score")
-                if item.get("score") is not None
-                else 1.0
-            )
+            raw_distance = _resolve_milvus_distance(item)
             adjusted_raw = item.get("adjusted_score")
             adjusted_score = (
                 float(adjusted_raw) if adjusted_raw is not None else None
@@ -58,10 +63,11 @@ class SearchVectoryAdapter:
                 RetrievedChunk(
                     id=str(item.get("id", "")),
                     content=str(item.get("content", "")),
-                    score=raw_distance,
+                    distance=raw_distance,
                     metadata=dict(item.get("metadata") or {}),
                     similarity=distance_to_similarity(raw_distance),
                     adjusted_score=adjusted_score,
+                    source=dict(item),
                 )
             )
         return chunks

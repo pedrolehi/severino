@@ -51,13 +51,18 @@ def format_chunks_debug(
 
 def _chunk_from_dict(data: dict) -> RetrievedChunk:
     adjusted = data.get("adjusted_score")
+    distance_raw = data.get("distance")
+    if distance_raw is None:
+        distance_raw = data.get("score", 0)
+    source = data.get("source")
     return RetrievedChunk(
         id=str(data.get("id", "")),
         content=str(data.get("content", "")),
-        score=float(data.get("score", 0)),
+        distance=float(distance_raw),
         metadata=dict(data.get("metadata") or {}),
         similarity=float(data.get("similarity", 0)),
         adjusted_score=float(adjusted) if adjusted is not None else None,
+        source=dict(source) if isinstance(source, dict) else None,
     )
 
 

@@ -6,10 +6,18 @@ from typing import Any, Literal, Protocol
 class RetrievedChunk:
     id: str
     content: str
-    score: float  # distância L2 Milvus (menor = melhor)
+    distance: float  # distância L2 Milvus (menor = melhor)
     metadata: dict
-    similarity: float
-    adjusted_score: float | None = None  # pós-rerank vectory (pode ser 0 por clamp)
+    similarity: float  # uso interno (gate/contexto)
+    adjusted_score: float | None = None  # pós-rerank vectory (menor = melhor)
+    source: dict[str, Any] | None = None  # item bruto do search-vectory
+
+    @property
+    def score(self) -> float:
+        """Distância efetiva para gate: rerank quando existir."""
+        if self.adjusted_score is not None:
+            return self.adjusted_score
+        return self.distance
 
 
 @dataclass(frozen=True, slots=True)

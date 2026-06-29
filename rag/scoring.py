@@ -10,5 +10,12 @@ def distance_to_similarity(distance_score: float) -> float:
     return max(0.0, 1.0 - distance_score)
 
 
-def passes_similarity_threshold(distance_score: float, min_similarity: float) -> bool:
-    return distance_to_similarity(distance_score) >= min_similarity
+def passes_similarity_threshold(
+    distance: float,
+    max_distance: float,
+    *,
+    adjusted_score: float | None = None,
+) -> bool:
+    """Alinhado ao vectory: passa se distância efetiva <= max_distance."""
+    effective = distance if adjusted_score is None else adjusted_score
+    return effective <= max_distance

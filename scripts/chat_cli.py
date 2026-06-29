@@ -81,9 +81,14 @@ def main() -> None:
                 RetrievedChunk(
                     id=str(item.get("id", "")),
                     content=str(item.get("content", "")),
-                    score=float(item.get("score", 0)),
+                    distance=float(item.get("distance", item.get("score", 0))),
                     metadata=dict(item.get("metadata") or {}),
                     similarity=float(item.get("similarity", 0)),
+                    adjusted_score=(
+                        float(item["adjusted_score"])
+                        if item.get("adjusted_score") is not None
+                        else None
+                    ),
                 )
                 for item in (final_state.get("chunks") or [])
             ]

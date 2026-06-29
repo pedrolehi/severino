@@ -74,9 +74,14 @@ def run_query(
         RetrievedChunk(
             id=str(c["id"]),
             content=str(c["content"]),
-            score=float(c["score"]),
+            distance=float(c.get("distance", c.get("score", 0))),
             metadata=dict(c["metadata"] or {}),
             similarity=float(c["similarity"]),
+            adjusted_score=(
+                float(c["adjusted_score"])
+                if c.get("adjusted_score") is not None
+                else None
+            ),
         )
         for c in chunks
     ]

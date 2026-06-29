@@ -33,22 +33,28 @@ def _chunk_to_dict(chunk: RetrievedChunk) -> dict[str, Any]:
     return {
         "id": chunk.id,
         "content": chunk.content,
-        "score": chunk.score,
-        "similarity": chunk.similarity,
+        "distance": chunk.distance,
         "adjusted_score": chunk.adjusted_score,
+        "similarity": chunk.similarity,
         "metadata": chunk.metadata,
+        "source": chunk.source,
     }
 
 
 def _chunk_from_dict(data: dict[str, Any]) -> RetrievedChunk:
     adjusted = data.get("adjusted_score")
+    distance_raw = data.get("distance")
+    if distance_raw is None:
+        distance_raw = data.get("score", 0)
+    source = data.get("source")
     return RetrievedChunk(
         id=str(data.get("id", "")),
         content=str(data.get("content", "")),
-        score=float(data.get("score", 0)),
+        distance=float(distance_raw),
         metadata=dict(data.get("metadata") or {}),
         similarity=float(data.get("similarity", 0)),
         adjusted_score=float(adjusted) if adjusted is not None else None,
+        source=dict(source) if isinstance(source, dict) else None,
     )
 
 
@@ -170,7 +176,7 @@ def retrieve(state: RagSubgraphState) -> dict[str, Any]:
     )
 
     history = list(state.get("search_history") or [])
-    top_score = chunks[0].score if chunks else 1.0
+    top_score = chunks[0].distance if chunks else 1.0
     top_similarity = chunks[0].similarity if chunks else 0.0
     history.append(
         {
@@ -223,7 +229,11 @@ def retrieval_gate(state: RagSubgraphState) -> dict[str, Any]:
         }
 
     top = chunks[0]
-    if not passes_similarity_threshold(top.score, policy.quality.min_similarity):
+    if not passes_similarity_threshold(
+        top.distance,
+        policy.quality.min_similarity,
+        adjusted_score=top.adjusted_score,
+    ):
         if attempt + 1 < max_attempts:
             return {
                 "retry_reason": (
