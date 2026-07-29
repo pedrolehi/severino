@@ -1,5 +1,3 @@
-import _bootstrap  # noqa: F401
-
 import argparse
 import uuid
 
