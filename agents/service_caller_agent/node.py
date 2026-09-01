@@ -45,7 +45,7 @@ def service_caller_agent(state: MultiAgentState) -> dict:
     flow_name = flow_name_from_tool(tool_name)
 
     if flow_name:
-        if flow_name not in caps.flows_names:
+        if flow_name not in caps.flow_names:
             return {
                 "messages": [
                     AIMessage(

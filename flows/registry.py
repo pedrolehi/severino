@@ -7,6 +7,7 @@ from langchain_core.tools import StructuredTool
 from langgraph.graph import END
 
 from flows.flow_contract import FlowRegistration
+from flows.runtime import wrap_flow_node
 
 
 class FlowSpec(TypedDict):
@@ -14,7 +15,7 @@ class FlowSpec(TypedDict):
     description: str
 
 
-SKIP_MODULES = {"entry", "registry", "flow_contract"}
+SKIP_MODULES = {"entry", "registry", "flow_contract", "runtime"}
 
 
 def _discover_flows() -> dict[str, FlowSpec]:
@@ -114,5 +115,5 @@ def register_flow_graphs_for_assistant(workflow, assistant_id: str) -> None:
 def register_flow_graphs(workflow, flows: dict[str, FlowSpec] | None = None) -> None:
     flow_specs = flows if flows is not None else FLOWS
     for name, spec in flow_specs.items():
-        workflow.add_node(name, spec["builder"]())
+        workflow.add_node(name, wrap_flow_node(spec["builder"]()))
         workflow.add_edge(name, END)
