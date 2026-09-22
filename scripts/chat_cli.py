@@ -1,5 +1,7 @@
 import argparse
+import time
 import uuid
+from typing import Any
 
 from langchain_core.messages import HumanMessage
 
@@ -11,6 +13,35 @@ from rag.pipeline import format_chunks_debug, run_rag_subgraph
 from rag.policy import resolve_rag_policy
 from rag.ports import RetrievedChunk
 from rag.project_store import resolve_assistant_collection
+
+
+def _fmt_ms(ms: float) -> str:
+    if ms >= 1000:
+        return f"{ms / 1000:.2f}s"
+    return f"{ms:.0f}ms"
+
+
+def _print_vectory_timings(rag_result: dict[str, Any] | None) -> None:
+    if not rag_result:
+        return
+    timings = rag_result.get("timings_ms")
+    if isinstance(timings, dict) and timings:
+        parts = [
+            f"{key}={_fmt_ms(float(val))}"
+            for key, val in timings.items()
+            if isinstance(val, (int, float))
+        ]
+        if parts:
+            print(f"[TIMING]   vectory: {', '.join(parts)}")
+    trace = rag_result.get("trace")
+    if isinstance(trace, list):
+        for step in trace:
+            if not isinstance(step, dict):
+                continue
+            step_id = step.get("id") or step.get("label") or "?"
+            duration = step.get("duration_ms")
+            if isinstance(duration, (int, float)):
+                print(f"[TIMING]   trace.{step_id}={_fmt_ms(float(duration))}")
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,16 +127,19 @@ def main() -> None:
             if user_input.lower() in {"sair", "exit", "quit"}:
                 break
 
+            t0 = time.perf_counter()
             final_state = run_rag_subgraph(
                 assistant_id=args.assistant,
                 query=user_input,
                 app_env=app_env,
             )
+            total_ms = (time.perf_counter() - t0) * 1000
             if final_state.get("fallback_reason"):
                 print(
                     f"Fallback ({final_state.get('fallback_source')}): "
                     f"{final_state.get('fallback_reason')}"
                 )
+                print(f"[TIMING] total={_fmt_ms(total_ms)}")
                 continue
 
             rag_result = final_state.get("rag_result") or {}
@@ -119,6 +153,8 @@ def main() -> None:
                     if content:
                         answer = str(content)
                         break
+            print(f"[TIMING] rag_pipeline={_fmt_ms(total_ms)}")
+            _print_vectory_timings(rag_result if isinstance(rag_result, dict) else None)
             print(f"Assistant: {answer}")
             print(
                 f"[pipeline] status={rag_result.get('status')} "
@@ -177,7 +213,9 @@ def main() -> None:
         if user_input.lower() in {"sair", "exit", "quit"}:
             break
 
-        result = graph.invoke(
+        t0 = time.perf_counter()
+        step_t = t0
+        for update in graph.stream(
             {
                 "assistant_id": args.assistant,
                 "session_id": session_id,
@@ -185,9 +223,30 @@ def main() -> None:
                 "messages": [HumanMessage(content=user_input)],
             },
             config=config,
-        )
+            stream_mode="updates",
+        ):
+            now = time.perf_counter()
+            dt_ms = (now - step_t) * 1000
+            cum_ms = (now - t0) * 1000
+            if not isinstance(update, dict):
+                step_t = now
+                continue
+            for node_name, payload in update.items():
+                print(
+                    f"[TIMING] step={node_name} "
+                    f"dt={_fmt_ms(dt_ms)} cum={_fmt_ms(cum_ms)}"
+                )
+                if node_name == "rag_subgraph" and isinstance(payload, dict):
+                    rag_result = payload.get("rag_result")
+                    _print_vectory_timings(
+                        rag_result if isinstance(rag_result, dict) else None
+                    )
+            step_t = now
 
-        reply = result["messages"][-1].content
+        state = graph.get_state(config).values
+        reply = state["messages"][-1].content
+        total_ms = (time.perf_counter() - t0) * 1000
+        print(f"[TIMING] total={_fmt_ms(total_ms)}")
         print(f"Assistant: {reply}")
 
 

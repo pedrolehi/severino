@@ -153,6 +153,15 @@ def run_rag_pipeline(
         f"judge_ok={body.get('judge_ok')} log_id={body.get('log_id')!r} "
         f"llm={body.get('llm_model')!r}"
     )
+    timings_ms = body.get("timings_ms")
+    if isinstance(timings_ms, dict) and timings_ms:
+        parts = [
+            f"{key}={int(val)}ms"
+            for key, val in timings_ms.items()
+            if isinstance(val, (int, float))
+        ]
+        if parts:
+            print(f"[RAG pipeline] timings: {', '.join(parts)}")
 
     draft = answer or clarification or ""
     fallback_reason, fallback_source, fallback_hint = _map_pipeline_status(status)
