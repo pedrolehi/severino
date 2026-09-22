@@ -3,7 +3,10 @@ import _bootstrap  # noqa: F401
 import argparse
 
 from assistants.registry import get_assistant_by_id, list_assistant_ids
+from core.config import APP_ENV
+from rag.config import VECTORY_ENV_BY_APP_ENV
 from rag.pipeline import format_chunks_debug, run_rag_subgraph
+from rag.ports import RetrievedChunk
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,6 +17,12 @@ def parse_args() -> argparse.Namespace:
         "--assistant",
         default="intranet",
         help="ID do assistant (ex: intranet, portal_aluno)",
+    )
+    parser.add_argument(
+        "--env",
+        choices=sorted(VECTORY_ENV_BY_APP_ENV.keys()),
+        default=(APP_ENV if APP_ENV in VECTORY_ENV_BY_APP_ENV else "dev"),
+        help="Ambiente Mongo/project para collection (dev|hml|prod)",
     )
     parser.add_argument(
         "--list",
@@ -40,8 +49,13 @@ def run_query(
     assistant_id: str,
     query: str,
     truncate: int | None,
+    app_env: str,
 ) -> None:
-    final_state = run_rag_subgraph(assistant_id=assistant_id, query=query)
+    final_state = run_rag_subgraph(
+        assistant_id=assistant_id,
+        query=query,
+        app_env=app_env,
+    )
 
     if final_state.get("fallback_reason"):
         print(f"Fallback ({final_state.get('fallback_source')}): {final_state.get('fallback_reason')}")
@@ -57,7 +71,24 @@ def run_query(
         return
 
     rag_result = final_state.get("rag_result") or {}
-    print(f"Assistant: {final_state.get('draft_answer') or ''}")
+    answer = (
+        final_state.get("draft_answer")
+        or rag_result.get("draft_answer")
+        or ""
+    )
+    if not answer:
+        messages = final_state.get("messages") or []
+        for message in reversed(messages):
+            content = getattr(message, "content", None)
+            if content:
+                answer = str(content)
+                break
+    print(f"Assistant: {answer}")
+    print(
+        f"[pipeline] status={rag_result.get('status')} "
+        f"log_id={rag_result.get('log_id')!r} "
+        f"chunks={rag_result.get('retrieved_chunk_count')}"
+    )
     chunks = [
         {
             "id": c.get("id"),
@@ -65,10 +96,11 @@ def run_query(
             "score": c.get("score"),
             "similarity": c.get("similarity"),
             "metadata": c.get("metadata"),
+            "distance": c.get("distance"),
+            "adjusted_score": c.get("adjusted_score"),
         }
         for c in (final_state.get("chunks") or [])
     ]
-    from rag.ports import RetrievedChunk
 
     parsed_chunks = [
         RetrievedChunk(
@@ -114,10 +146,11 @@ def main() -> None:
             assistant_id=args.assistant,
             query=args.query,
             truncate=args.truncate,
+            app_env=args.env,
         )
         return
 
-    print(f"RAG debug | assistant={args.assistant}")
+    print(f"RAG debug | assistant={args.assistant} env={args.env}")
     print("Digite a pergunta. (sair / exit / quit para encerrar)")
 
     while True:
@@ -136,6 +169,7 @@ def main() -> None:
             assistant_id=args.assistant,
             query=user_input,
             truncate=args.truncate,
+            app_env=args.env,
         )
 
 

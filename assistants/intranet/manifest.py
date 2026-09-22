@@ -7,7 +7,8 @@ ASSISTANT = define_assistant(
     tool_module_names=["academic"],
     flow_module_names=["segunda_via_boleto", "segunda_via_nota_fiscal"],
     rag=RagBinding(
-        project_id="4e1feb71-26b6-441c-95ad-3699f4df8094",
+        # slug/UUID no Mongo `projects` — collection via APP_ENV / --env
+        project_id="intranet",
         max_search_attempts=2,
         use_hybrid_search=True,
     ),

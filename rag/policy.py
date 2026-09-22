@@ -34,6 +34,7 @@ class QualityPolicy:
 @dataclass(frozen=True, slots=True)
 class RagPolicy:
     project_id: str
+    collection_name: str | None = None
     prompt_path: Path = DEFAULT_PROMPT
     judge_prompt_path: Path = DEFAULT_JUDGE_PROMPT
     fallback_prompt_path: Path = DEFAULT_FALLBACK_PROMPT
@@ -52,7 +53,10 @@ def _resolve_path(value: str | Path | None, default: Path) -> Path:
 
 def resolve_rag_policy(assistant: AssistantRegistration) -> RagPolicy:
     binding: RagBinding = assistant.rag
-    base = RagPolicy(project_id=binding.project_id)
+    base = RagPolicy(
+        project_id=binding.project_id,
+        collection_name=(binding.collection_name or None),
+    )
 
     overrides: dict = {}
     if binding.prompt_path is not None:

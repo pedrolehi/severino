@@ -42,6 +42,19 @@ def resolve_collection_name(project_id: str, app_env: str) -> str:
     if not collection_name:
         raise ProjectStoreError(
             f"Collection não configurada para projeto '{project_id}' "
-            f"no ambiente '{vectory_env}'"
+            f"no ambiente '{vectory_env}' (app_env={app_env})"
         )
     return str(collection_name)
+
+
+def resolve_assistant_collection(
+    *,
+    project_id: str,
+    app_env: str,
+    collection_name: str | None = None,
+) -> str:
+    """Override explícito ou lookup Mongo projects[env]."""
+    override = (collection_name or "").strip()
+    if override:
+        return override
+    return resolve_collection_name(project_id, app_env)

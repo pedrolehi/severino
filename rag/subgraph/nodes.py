@@ -6,13 +6,13 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from assistants.registry import get_assistant_by_id
-from core.config import APP_ENV
+from core.config import APP_ENV, SEARCH_VECTORY_URL
 from core.llm import llm
 from rag.adapters.search_vectory import SearchVectoryAdapter
-from rag.policy import RagPolicy, resolve_rag_policy
 from rag.citations import build_citations, chunks_to_retrieval_payload
+from rag.policy import RagPolicy, resolve_rag_policy
 from rag.ports import RetrievedChunk
-from rag.project_store import resolve_collection_name
+from rag.project_store import resolve_assistant_collection
 from rag.subgraph.models import JudgeVerdictModel
 from rag.subgraph.state import RagSubgraphState
 
@@ -164,7 +164,16 @@ def prepare_query(state: RagSubgraphState) -> dict[str, Any]:
 
 def retrieve(state: RagSubgraphState) -> dict[str, Any]:
     policy = _load_policy(state)
-    collection_name = resolve_collection_name(policy.project_id, APP_ENV)
+    app_env = (state.get("app_env") or APP_ENV or "dev").strip().lower()
+    collection_name = resolve_assistant_collection(
+        project_id=policy.project_id,
+        app_env=app_env,
+        collection_name=policy.collection_name,
+    )
+    print(
+        f"[RAG retrieve] project={policy.project_id} app_env={app_env} "
+        f"collection={collection_name} url={SEARCH_VECTORY_URL}"
+    )
     search_query = (state.get("search_query") or state.get("query") or "").strip()
     attempt = int(state.get("search_attempt") or 0)
 
@@ -177,6 +186,13 @@ def retrieve(state: RagSubgraphState) -> dict[str, Any]:
     history = list(state.get("search_history") or [])
     top_score = chunks[0].distance if chunks else 1.0
     top_similarity = chunks[0].similarity if chunks else 0.0
+    print(
+        f"[RAG retrieve] hits={len(chunks)} top_sim={top_similarity:.3f} "
+        f"top_dist={top_score:.3f} q={search_query!r}"
+    )
+    if chunks:
+        preview = (chunks[0].content or "").replace("\n", " ").strip()[:120]
+        print(f"[RAG retrieve] top_chunk_id={chunks[0].id} preview={preview!r}")
     history.append(
         {
             "attempt": attempt,

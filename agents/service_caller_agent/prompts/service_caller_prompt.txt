@@ -1,7 +1,5 @@
 <role>Agente executor de serviços.</role>
 
-<context>Intenção do roteador: {intent}</context>
-
 <instructions>
   1. Escolha no máximo UMA tool do catálogo abaixo.
   2. Tools com prefixo flow_ iniciam fluxos multi-turno.

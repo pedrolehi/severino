@@ -33,10 +33,7 @@ def fallback_agent(state: MultiAgentState) -> dict:
     policy = resolve_rag_policy(assistant)
 
     fallback_source = state.get("fallback_source") or "router"
-    fallback_reason = state.get("fallback_reason")
-    if not fallback_reason:
-        decision = state.get("decision") or {}
-        fallback_reason = decision.get("routing_reason") or "router:fallback"
+    fallback_reason = state.get("fallback_reason") or "router:fallback"
 
     fallback_hint = state.get("fallback_hint") or ""
     prompt_template = policy.fallback_prompt_path.read_text(encoding="utf-8")

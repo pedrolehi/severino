@@ -24,12 +24,7 @@ def service_caller_agent(state: MultiAgentState) -> dict:
 
     caps = resolve_capabilities(assistant_id)
 
-    decision = state.get("decision") or {}
-    intent = decision.get("intent", "Atender a solicitação do usuário")
-
-    system_prompt = load_prompt().format(
-        intent=intent, capabilities=caps.bindable_catalog()
-    )
+    system_prompt = load_prompt().format(capabilities=caps.bindable_catalog())
 
     history = state["messages"][-20:]
     messages = [SystemMessage(content=system_prompt)] + history

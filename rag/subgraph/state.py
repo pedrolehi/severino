@@ -11,6 +11,7 @@ class RagSubgraphState(TypedDict, total=False):
 
     assistant_id: str
     query: str
+    app_env: str
     search_query: str
     search_attempt: int
     search_history: list[dict[str, Any]]

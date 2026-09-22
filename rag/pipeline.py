@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from assistants.assistant_contract import AssistantRegistration
 from assistants.registry import get_assistant_by_id
+from core.config import APP_ENV
+from rag.pipeline_vectory import run_rag_pipeline
 from rag.ports import RagRunResult, RetrievedChunk
-from rag.subgraph.builder import build_rag_subgraph
-
-_rag_subgraph = build_rag_subgraph()
 
 
 def format_context(chunks: list[RetrievedChunk]) -> str:
@@ -70,12 +69,17 @@ def run_rag_subgraph(
     *,
     assistant_id: str,
     query: str,
+    app_env: str | None = None,
+    session_id: str | None = None,
+    conversation: list[dict[str, str]] | None = None,
 ) -> dict:
-    return _rag_subgraph.invoke(
-        {
-            "assistant_id": assistant_id,
-            "query": query.strip(),
-        }
+    """RAG via pipeline search-vectory (POST /rag/answer)."""
+    return run_rag_pipeline(
+        assistant_id=assistant_id,
+        query=query,
+        app_env=app_env or APP_ENV,
+        session_id=session_id,
+        conversation=conversation,
     )
 
 
@@ -85,8 +89,11 @@ def run_rag(
     query: str,
     app_env: str | None = None,
 ) -> RagRunResult:
-    del app_env  # resolvido via APP_ENV em project_store
-    final_state = run_rag_subgraph(assistant_id=assistant.id, query=query)
+    final_state = run_rag_subgraph(
+        assistant_id=assistant.id,
+        query=query,
+        app_env=app_env,
+    )
 
     if final_state.get("fallback_reason"):
         raise RagFallbackError(

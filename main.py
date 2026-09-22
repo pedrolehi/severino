@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
 
 from assistants.registry import get_assistant_by_id, list_assistant_ids
+from core.config import APP_ENV
 from core.hub import build_thread_id, get_graph
 
 load_dotenv()
@@ -27,6 +28,8 @@ class ChatResponse(BaseModel):
     session_id: str
     response: str
     route: str | None = None
+    confidence: float | None = None
+    router_trace: dict[str, Any] | None = None
     fallback_reason: str | None = None
     fallback_source: str | None = None
     fallback_hint: str | None = None
@@ -63,6 +66,7 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
             "assistant_id": request.assistant_id,
             "user_id": request.user_id,
             "session_id": session_id,
+            "app_env": APP_ENV or "dev",
             "messages": [HumanMessage(content=request.message)],
         },
         config=config,
@@ -81,12 +85,23 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
 
     decision = result.get("decision") or {}
     route = decision.get("route")
+    if isinstance(route, dict):
+        route = route.get("choice")
+    confidence_raw = decision.get("confidence")
+    confidence = (
+        float(confidence_raw) if isinstance(confidence_raw, (int, float)) else None
+    )
+    router_trace = decision.get("trace")
+    if not isinstance(router_trace, dict):
+        router_trace = None
 
     return ChatResponse(
         assistant_id=request.assistant_id,
         session_id=session_id,
         response=response_text,
-        route=route,
+        route=route if isinstance(route, str) else None,
+        confidence=confidence,
+        router_trace=router_trace,
         fallback_reason=result.get("fallback_reason"),
         fallback_source=result.get("fallback_source"),
         fallback_hint=result.get("fallback_hint"),

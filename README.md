@@ -59,10 +59,18 @@ REDIS_PASSWORD=
 
 APP_ENV=
 SEARCH_VECTORY_URL=
+# Mesmo INTERNAL_API_TOKEN do search-vectory (HML/local). Header X-Internal-Token.
+SEARCH_VECTORY_INTERNAL_TOKEN=
 MONGODB_URI=
 MONGODB_DATABASE=
 RAG_TOP_K=
 RAG_ENABLE_RERANKING=
+
+# OpenJEV — router (choice + confidence). Erro → fallback LLM.
+USE_JEV_ROUTER=true
+OPENJEV_BASE_URL=http://172.23.130.84:5000
+# OPENJEV_API_KEY=
+# OPENJEV_TIMEOUT_S=30
 
 # senac-orchestrate (flows GEF)
 SENAC_ORCHESTRATE_URL=https://HOST/v2
@@ -120,9 +128,12 @@ Sem `session_id` → gera UUID. Mesmo `session_id` = mesma thread Redis (`{assis
 
 ```powershell
 python -m scripts.chat_cli --list
-python -m scripts.chat_cli --assistant intranet
-python -m scripts.chat_cli --assistant portal_aluno --rag-debug
+python -m scripts.chat_cli --assistant intranet --env dev
+python -m scripts.chat_cli --assistant intranet --env hml
+python -m scripts.chat_cli --assistant portal_aluno --rag-debug --env dev
 ```
+
+`--env` escolhe a chave `collections.{dev|homolog|prod}` do projeto Mongo (`dev`→`dev`, `hml`→`homolog`, `prod`→`prod`). Default: `APP_ENV` ou `dev`.
 
 Debug VS Code: config **Chat CLI** em `.vscode/launch.json`.
 
@@ -154,7 +165,8 @@ from-scratch-multiagent/
 
 1. Pasta `assistants/<id>/` com `ASSISTANT = define_assistant(...)`
 2. Tools em `tools/` e/ou flows em `flows/`
-3. `RagBinding(project_id=...)` apontando collection
+3. `RagBinding(project_id=...)` — slug/UUID no Mongo `projects`; collection via `--env`/`APP_ENV`
+   - opcional `collection_name=` só para override (pula Mongo)
 4. Registry descobre sozinho no boot
 
 ---

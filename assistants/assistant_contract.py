@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True)
 class RagBinding:
     project_id: str
+    collection_name: str | None = None
     prompt_path: str | None = None
     judge_prompt_path: str | None = None
     fallback_prompt_path: str | None = None
