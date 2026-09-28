@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import sys
+from collections.abc import Callable
 from typing import Any
 
 from langchain_core.messages import AIMessage
 
 from assistants.registry import get_assistant_by_id
 from core.config import APP_ENV, SEARCH_VECTORY_URL
-from rag.adapters.rag_answer_vectory import VectoryHttpError, call_rag_answer
+from rag.adapters.rag_answer_vectory import (
+    VectoryHttpError,
+    call_rag_answer,
+    iter_rag_answer,
+)
 from rag.policy import resolve_rag_policy
 from rag.project_store import resolve_assistant_collection
 from rag.scoring import distance_to_similarity
@@ -85,62 +91,14 @@ def _map_pipeline_status(status: str) -> tuple[str | None, str | None, str | Non
     )
 
 
-def run_rag_pipeline(
+def _body_to_state(
     *,
-    assistant_id: str,
-    query: str,
-    app_env: str | None = None,
-    session_id: str | None = None,
-    conversation: list[dict[str, str]] | None = None,
+    body: dict[str, Any],
+    query_clean: str,
+    env: str,
+    collection_name: str,
+    quiet: bool = False,
 ) -> dict[str, Any]:
-    """Chama POST /rag/answer e devolve state compatível com rag_subgraph_node."""
-    assistant = get_assistant_by_id(assistant_id)
-    policy = resolve_rag_policy(assistant)
-    env = (app_env or APP_ENV or "dev").strip().lower()
-    collection_name = resolve_assistant_collection(
-        project_id=policy.project_id,
-        app_env=env,
-        collection_name=policy.collection_name,
-    )
-    query_clean = query.strip()
-    turns = list(conversation or [])
-
-    print(
-        f"[RAG pipeline] assistant={assistant_id} app_env={env} "
-        f"collection={collection_name} url={SEARCH_VECTORY_URL}/rag/answer "
-        f"q={query_clean[:80]!r} conversation_turns={len(turns)}"
-    )
-
-    try:
-        body = call_rag_answer(
-            query=query_clean,
-            collection_name=collection_name,
-            top_k=policy.search.top_k,
-            search_buffer=max(1, int(policy.search.search_buffer or 1)),
-            conversation=turns or None,
-            session_id=session_id,
-            agent_id=assistant_id,
-            persist_log=True,
-        )
-    except VectoryHttpError as exc:
-        print(f"[RAG pipeline] HTTP erro: {exc}")
-        return {
-            "query": query_clean,
-            "app_env": env,
-            "collection_name": collection_name,
-            "chunks": [],
-            "search_attempt": 0,
-            "fallback_reason": "rag_pipeline:http_error",
-            "fallback_source": "rag_pipeline",
-            "fallback_hint": str(exc.detail),
-            "rag_result": {
-                "query": query_clean,
-                "collection_name": collection_name,
-                "pipeline": "rag_answer",
-                "error": str(exc.detail),
-            },
-        }
-
     status = str(body.get("status") or "")
     raw_chunks = body.get("chunks") if isinstance(body.get("chunks"), list) else []
     chunks = [_chunk_item_to_state(item) for item in raw_chunks if isinstance(item, dict)]
@@ -148,20 +106,24 @@ def run_rag_pipeline(
     clarification = (body.get("clarification_question") or "").strip()
     fallback_message = (body.get("fallback_message") or "").strip()
 
-    print(
-        f"[RAG pipeline] status={status} chunks={len(chunks)} "
-        f"judge_ok={body.get('judge_ok')} log_id={body.get('log_id')!r} "
-        f"llm={body.get('llm_model')!r}"
-    )
-    timings_ms = body.get("timings_ms")
-    if isinstance(timings_ms, dict) and timings_ms:
-        parts = [
-            f"{key}={int(val)}ms"
-            for key, val in timings_ms.items()
-            if isinstance(val, (int, float))
-        ]
-        if parts:
-            print(f"[RAG pipeline] timings: {', '.join(parts)}")
+    if not quiet:
+        print(
+            f"[RAG pipeline] status={status} chunks={len(chunks)} "
+            f"judge_ok={body.get('judge_ok')} log_id={body.get('log_id')!r} "
+            f"llm={body.get('llm_model')!r}"
+        )
+        timings_ms = body.get("timings_ms")
+        if isinstance(timings_ms, dict) and timings_ms:
+            parts = [
+                f"{key}={int(val)}ms"
+                for key, val in timings_ms.items()
+                if isinstance(val, (int, float))
+            ]
+            if parts:
+                print(f"[RAG pipeline] timings: {', '.join(parts)}")
+    else:
+        # Stream: silencia — CLI imprime timings apos a resposta.
+        pass
 
     draft = answer or clarification or ""
     fallback_reason, fallback_source, fallback_hint = _map_pipeline_status(status)
@@ -211,10 +173,106 @@ def run_rag_pipeline(
     }
     if draft:
         result["messages"] = [AIMessage(content=draft)]
-        # resposta útil → não manda pro fallback_agent
         if status in {"answered", "needs_clarification"}:
             result["fallback_reason"] = None
             result["fallback_source"] = None
             result["fallback_hint"] = None
 
     return result
+
+
+def run_rag_pipeline(
+    *,
+    assistant_id: str,
+    query: str,
+    app_env: str | None = None,
+    session_id: str | None = None,
+    conversation: list[dict[str, str]] | None = None,
+    stream: bool = False,
+    on_token: Callable[[str], None] | None = None,
+    on_step: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Chama POST /rag/answer (ou /stream) e devolve state do rag_subgraph_node."""
+    assistant = get_assistant_by_id(assistant_id)
+    policy = resolve_rag_policy(assistant)
+    env = (app_env or APP_ENV or "dev").strip().lower()
+    collection_name = resolve_assistant_collection(
+        project_id=policy.project_id,
+        app_env=env,
+        collection_name=policy.collection_name,
+    )
+    query_clean = query.strip()
+    turns = list(conversation or [])
+    endpoint = "rag/answer/stream" if stream else "rag/answer"
+    log = sys.stderr if stream else sys.stdout
+
+    print(
+        f"[RAG pipeline] assistant={assistant_id} app_env={env} "
+        f"collection={collection_name} url={SEARCH_VECTORY_URL}/{endpoint} "
+        f"q={query_clean[:80]!r} conversation_turns={len(turns)}",
+        file=log,
+        flush=True,
+    )
+
+    try:
+        if stream:
+            body: dict[str, Any] | None = None
+            for event in iter_rag_answer(
+                query=query_clean,
+                collection_name=collection_name,
+                top_k=policy.search.top_k,
+                search_buffer=max(1, int(policy.search.search_buffer or 1)),
+                conversation=turns or None,
+                session_id=session_id,
+                agent_id=assistant_id,
+                persist_log=True,
+            ):
+                kind = event.get("event")
+                if kind == "token":
+                    text = str(event.get("text") or "")
+                    if text and on_token:
+                        on_token(text)
+                elif kind == "step":
+                    if on_step:
+                        on_step(event)
+                elif kind == "done":
+                    body = {k: v for k, v in event.items() if k != "event"}
+            if body is None:
+                raise VectoryHttpError(502, "stream terminou sem evento done")
+        else:
+            body = call_rag_answer(
+                query=query_clean,
+                collection_name=collection_name,
+                top_k=policy.search.top_k,
+                search_buffer=max(1, int(policy.search.search_buffer or 1)),
+                conversation=turns or None,
+                session_id=session_id,
+                agent_id=assistant_id,
+                persist_log=True,
+            )
+    except VectoryHttpError as exc:
+        print(f"[RAG pipeline] HTTP erro: {exc}")
+        return {
+            "query": query_clean,
+            "app_env": env,
+            "collection_name": collection_name,
+            "chunks": [],
+            "search_attempt": 0,
+            "fallback_reason": "rag_pipeline:http_error",
+            "fallback_source": "rag_pipeline",
+            "fallback_hint": str(exc.detail),
+            "rag_result": {
+                "query": query_clean,
+                "collection_name": collection_name,
+                "pipeline": "rag_answer",
+                "error": str(exc.detail),
+            },
+        }
+
+    return _body_to_state(
+        body=body,
+        query_clean=query_clean,
+        env=env,
+        collection_name=collection_name,
+        quiet=stream,
+    )

@@ -77,6 +77,12 @@ def parse_args() -> argparse.Namespace:
         metavar="N",
         help="Com --rag-debug: limita preview de cada chunk a N caracteres",
     )
+    parser.add_argument(
+        "--stream",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Stream tokens do generate (NDJSON /rag/answer/stream). Default: on.",
+    )
     return parser.parse_args()
 
 
@@ -112,7 +118,7 @@ def main() -> None:
     _print_rag_target(args.assistant, app_env)
 
     if args.rag_debug:
-        print(f"RAG debug | assistant={args.assistant} env={app_env}")
+        print(f"RAG debug | assistant={args.assistant} env={app_env} stream={args.stream}")
         print("Digite a pergunta. (sair / exit / quit para encerrar)")
 
         while True:
@@ -128,12 +134,25 @@ def main() -> None:
                 break
 
             t0 = time.perf_counter()
+            streamed = False
+
+            def on_token(text: str) -> None:
+                nonlocal streamed
+                if not streamed:
+                    print("Assistant: ", end="", flush=True)
+                    streamed = True
+                print(text, end="", flush=True)
+
             final_state = run_rag_subgraph(
                 assistant_id=args.assistant,
                 query=user_input,
                 app_env=app_env,
+                stream=bool(args.stream),
+                on_token=on_token if args.stream else None,
             )
             total_ms = (time.perf_counter() - t0) * 1000
+            if streamed:
+                print(flush=True)
             if final_state.get("fallback_reason"):
                 print(
                     f"Fallback ({final_state.get('fallback_source')}): "
@@ -155,7 +174,8 @@ def main() -> None:
                         break
             print(f"[TIMING] rag_pipeline={_fmt_ms(total_ms)}")
             _print_vectory_timings(rag_result if isinstance(rag_result, dict) else None)
-            print(f"Assistant: {answer}")
+            if not streamed:
+                print(f"Assistant: {answer}")
             print(
                 f"[pipeline] status={rag_result.get('status')} "
                 f"log_id={rag_result.get('log_id')!r} "
@@ -199,7 +219,7 @@ def main() -> None:
     }
 
     print(f"Assistant: {args.assistant}")
-    print(f"Session {session_id} started. (Ctrl+C to exit)")
+    print(f"Session {session_id} started. stream={args.stream} (Ctrl+C to exit)")
 
     while True:
         try:
@@ -215,29 +235,71 @@ def main() -> None:
 
         t0 = time.perf_counter()
         step_t = t0
-        for update in graph.stream(
+        streamed_via_custom = False
+        rag_wall_t0: float | None = None
+        rag_streamed_from_node = False
+
+        for item in graph.stream(
             {
                 "assistant_id": args.assistant,
                 "session_id": session_id,
                 "app_env": app_env,
+                "rag_stream": bool(args.stream),
                 "messages": [HumanMessage(content=user_input)],
             },
             config=config,
-            stream_mode="updates",
+            stream_mode=["updates", "custom"] if args.stream else "updates",
         ):
             now = time.perf_counter()
             dt_ms = (now - step_t) * 1000
             cum_ms = (now - t0) * 1000
-            if not isinstance(update, dict):
+
+            mode = "updates"
+            payload = item
+            if args.stream and isinstance(item, tuple) and len(item) == 2:
+                mode, payload = item
+
+            if mode == "custom" and isinstance(payload, dict):
+                if rag_wall_t0 is None:
+                    rag_wall_t0 = now
+                # Tokens ja sao impressos no rag_node (stdout direto).
+                # Aqui so marcamos wall / steps extras se vierem pelo writer.
+                if payload.get("type") == "token":
+                    streamed_via_custom = True
+                elif payload.get("type") == "step":
+                    # steps tambem ja vao no stderr pelo rag_node; ignora dup
+                    pass
                 step_t = now
                 continue
-            for node_name, payload in update.items():
-                print(
-                    f"[TIMING] step={node_name} "
-                    f"dt={_fmt_ms(dt_ms)} cum={_fmt_ms(cum_ms)}"
-                )
-                if node_name == "rag_subgraph" and isinstance(payload, dict):
-                    rag_result = payload.get("rag_result")
+
+            if not isinstance(payload, dict):
+                step_t = now
+                continue
+
+            for node_name, node_payload in payload.items():
+                if (
+                    node_name == "rag_subgraph"
+                    and isinstance(node_payload, dict)
+                    and node_payload.get("rag_streamed")
+                ):
+                    rag_streamed_from_node = True
+                if (
+                    node_name == "rag_subgraph"
+                    and rag_wall_t0 is not None
+                    and args.stream
+                ):
+                    wall_ms = (now - rag_wall_t0) * 1000
+                    print(
+                        f"[TIMING] step={node_name} "
+                        f"wall={_fmt_ms(wall_ms)} cum={_fmt_ms(cum_ms)}"
+                    )
+                else:
+                    print(
+                        f"[TIMING] step={node_name} "
+                        f"dt={_fmt_ms(dt_ms)} cum={_fmt_ms(cum_ms)}"
+                    )
+                if node_name == "rag_subgraph" and isinstance(node_payload, dict):
+                    rag_result = node_payload.get("rag_result")
                     _print_vectory_timings(
                         rag_result if isinstance(rag_result, dict) else None
                     )
@@ -247,7 +309,11 @@ def main() -> None:
         reply = state["messages"][-1].content
         total_ms = (time.perf_counter() - t0) * 1000
         print(f"[TIMING] total={_fmt_ms(total_ms)}")
-        print(f"Assistant: {reply}")
+        if not (streamed_via_custom or rag_streamed_from_node or args.stream):
+            print(f"Assistant: {reply}")
+        elif not (rag_streamed_from_node or streamed_via_custom):
+            # stream pedido mas sem tokens (ex.: blocked) — imprime resposta final
+            print(f"Assistant: {reply}")
 
 
 if __name__ == "__main__":

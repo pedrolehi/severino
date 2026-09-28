@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+from collections.abc import Iterator
+from typing import Any
+
 import httpx
 
 from core.config import SEARCH_VECTORY_INTERNAL_TOKEN, SEARCH_VECTORY_URL
@@ -12,9 +16,9 @@ class VectoryHttpError(Exception):
         super().__init__(f"Erro HTTP {status_code}: {detail}")
 
 
-def _build_headers() -> dict[str, str]:
+def _build_headers(*, accept: str = "application/json") -> dict[str, str]:
     headers = {
-        "Accept": "application/json",
+        "Accept": accept,
         "Content-Type": "application/json",
     }
     if SEARCH_VECTORY_INTERNAL_TOKEN:
@@ -57,3 +61,36 @@ def post_json(
         )
 
     raise VectoryHttpError(response.status_code, detail)
+
+
+def iter_ndjson(
+    path: str,
+    payload: dict,
+    *,
+    base_url: str | None = None,
+    timeout: float = 120.0,
+) -> Iterator[dict[str, Any]]:
+    """POST streaming NDJSON; yield cada linha JSON."""
+    root = (base_url or SEARCH_VECTORY_URL).rstrip("/")
+    url = f"{root}/{path.lstrip('/')}"
+
+    with httpx.Client(timeout=timeout) as client:
+        with client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=_build_headers(accept="application/x-ndjson"),
+        ) as response:
+            if not response.is_success:
+                detail = response.read().decode("utf-8", errors="replace").strip()
+                raise VectoryHttpError(response.status_code, detail or response.reason_phrase)
+            for line in response.iter_lines():
+                text = (line or "").strip()
+                if not text:
+                    continue
+                try:
+                    obj = json.loads(text)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(obj, dict):
+                    yield obj

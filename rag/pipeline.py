@@ -72,14 +72,20 @@ def run_rag_subgraph(
     app_env: str | None = None,
     session_id: str | None = None,
     conversation: list[dict[str, str]] | None = None,
+    stream: bool = False,
+    on_token=None,
+    on_step=None,
 ) -> dict:
-    """RAG via pipeline search-vectory (POST /rag/answer)."""
+    """RAG via pipeline search-vectory (POST /rag/answer ou /stream)."""
     return run_rag_pipeline(
         assistant_id=assistant_id,
         query=query,
         app_env=app_env or APP_ENV,
         session_id=session_id,
         conversation=conversation,
+        stream=stream,
+        on_token=on_token,
+        on_step=on_step,
     )
 
 

@@ -28,6 +28,8 @@ class MultiAgentState(TypedDict):
     chunks: list[dict[str, Any]] | None
     retrieval_metrics: dict[str, Any] | None
     rag_result: dict[str, Any] | None
+    rag_stream: bool | None
+    rag_streamed: bool | None
     fallback_reason: str | None
     fallback_source: str | None
     fallback_hint: str | None
