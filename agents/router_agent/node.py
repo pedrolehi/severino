@@ -1,6 +1,9 @@
 from pathlib import Path
 
+from typing import Optional
+
 from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
 
 from agents.router_agent.jev_router import route_with_jev
 from agents.router_agent.models import (
@@ -13,6 +16,7 @@ from assistants.capabilities import resolve_capabilities
 from core.config import USE_JEV_ROUTER
 from core.jev_client import JevClientError
 from core.llm import llm
+from graph.sse_queue import push_sse
 from graph.state import MultiAgentState
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "router_prompt.txt"
@@ -39,8 +43,11 @@ def _route_with_llm(state: MultiAgentState) -> RouteDecision:
     return structured_llm.invoke(messages)
 
 
-def router_agent(state: MultiAgentState) -> dict:
+def router_agent(
+    state: MultiAgentState, config: Optional[RunnableConfig] = None
+) -> dict:
     print("[ROUTER AGENT] Iniciando agente de roteamento...")
+    push_sse(config, {"event": "step", "id": "router", "status": "running"})
     assistant_id = state["assistant_id"]
     if not assistant_id:
         raise ValueError("Assistant ID não encontrado no estado")
@@ -71,6 +78,15 @@ def router_agent(state: MultiAgentState) -> dict:
         f"[ROUTER AGENT] source={source}, route={payload['route']}, "
         f"confidence={payload['confidence']:.3f}, "
         f"trace={payload['trace']}"
+    )
+    push_sse(
+        config,
+        {
+            "event": "step",
+            "id": "router",
+            "status": "ok",
+            "route": payload["route"],
+        },
     )
 
     return {"decision": payload}

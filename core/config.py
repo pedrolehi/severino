@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,9 +12,7 @@ SEARCH_VECTORY_URL = (
 ).strip()
 # S2S com search-vectory (header X-Internal-Token). Mesmo valor de INTERNAL_API_TOKEN.
 SEARCH_VECTORY_INTERNAL_TOKEN = (
-    os.getenv("SEARCH_VECTORY_INTERNAL_TOKEN")
-    or os.getenv("INTERNAL_API_TOKEN")
-    or ""
+    os.getenv("SEARCH_VECTORY_INTERNAL_TOKEN") or os.getenv("INTERNAL_API_TOKEN") or ""
 ).strip() or None
 MONGODB_URI = (os.getenv("MONGODB_URI") or "").strip()
 MONGODB_DATABASE = (os.getenv("MONGODB_DATABASE") or "vectory").strip() or "vectory"
@@ -24,15 +23,18 @@ REDIS_PASSWORD = (os.getenv("REDIS_PASSWORD") or "").strip()
 
 # OpenJEV (router e demais decisões tipadas)
 OPENJEV_BASE_URL = (
-    os.getenv("OPENJEV_BASE_URL") or "http://172.23.130.84:5000"
-).strip().rstrip("/")
+    (os.getenv("OPENJEV_BASE_URL") or "http://172.23.130.84:5000").strip().rstrip("/")
+)
 OPENJEV_API_KEY = (os.getenv("OPENJEV_API_KEY") or "").strip() or None
-OPENJEV_TIMEOUT_S = float(os.getenv("OPENJEV_TIMEOUT_S") or "30")
+OPENJEV_TIMEOUT_S = float(os.getenv("OPENJEV_TIMEOUT_S") or "4")
 USE_JEV_ROUTER = (os.getenv("USE_JEV_ROUTER") or "true").strip().lower() in {
     "1",
     "true",
     "yes",
 }
+# Ping /v1/systemone no boot e no intervalo. 0 = só no boot. Timeout próprio: o do router é curto.
+OPENJEV_WARMUP_INTERVAL_S = float(os.getenv("OPENJEV_WARMUP_INTERVAL_S") or "120")
+OPENJEV_WARMUP_TIMEOUT_S = float(os.getenv("OPENJEV_WARMUP_TIMEOUT_S") or "30")
 
 
 def is_redis_configured() -> bool:

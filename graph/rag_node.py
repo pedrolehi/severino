@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import sys
 
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_stream_writer
 
 from core.config import APP_ENV
@@ -11,24 +10,29 @@ from rag.conversation import build_conversation_from_messages
 from rag.pipeline import run_rag_subgraph
 
 
-def rag_subgraph_node(state: MultiAgentState) -> dict:
+def rag_subgraph_node(
+    state: MultiAgentState, config: RunnableConfig | None = None
+) -> dict:
     assistant_id = state.get("assistant_id")
     if not assistant_id:
         raise ValueError("assistant_id não encontrado no estado")
 
     last_message = state["messages"][-1]
     if not isinstance(last_message, HumanMessage):
-        raise ValueError("Última mensagem deve ser do usuário para RAG")
+        raise TypeError("Última mensagem deve ser do usuário para RAG")
 
     content = last_message.content
     query = content if isinstance(content, str) else str(content)
     app_env = (state.get("app_env") or APP_ENV or "dev").strip().lower()
     conversation = build_conversation_from_messages(state.get("messages") or [])
+    configurable = (config or {}).get("configurable") or {}
+    token_queue = configurable.get("token_queue")
     use_stream = bool(state.get("rag_stream", True))
     print(
         f"[RAG] assistant={assistant_id}, app_env={app_env}, "
         f"query={query[:80]!r}, conversation_turns={len(conversation)} "
-        f"(pipeline /rag/answer{'/stream' if use_stream else ''})",
+        f"(pipeline /rag/answer{'/stream' if use_stream else ''})"
+        f" sse_queue={'on' if token_queue is not None else 'off'}",
         file=sys.stderr if use_stream else sys.stdout,
         flush=True,
     )
@@ -50,6 +54,9 @@ def rag_subgraph_node(state: MultiAgentState) -> dict:
         if not text:
             return
         streamed_parts.append(text)
+        if token_queue is not None:
+            token_queue.put({"event": "token", "text": text})
+            return
         if not printed_prefix:
             print(flush=True)
             print("Assistant: ", end="", flush=True)
@@ -68,6 +75,8 @@ def rag_subgraph_node(state: MultiAgentState) -> dict:
             file=sys.stderr,
             flush=True,
         )
+        if token_queue is not None:
+            token_queue.put(dict(event))
         if writer is not None:
             writer({"type": "step", **event})
 
