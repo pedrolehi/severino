@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
@@ -35,6 +36,12 @@ async def _lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="from-scratch-multiagent API", lifespan=_lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 class ChatRequest(BaseModel):
@@ -180,12 +187,15 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                 + "\n\n"
             )
             return
+        rag_result = result.get("rag_result") or {}
+        citations = rag_result.get("citations") if isinstance(rag_result, dict) else []
         done = {
             "event": "done",
             "assistant_id": request.assistant_id,
             "session_id": session_id,
             "response": response_text,
             "route": _route_from_result(result),
+            "citations": citations if isinstance(citations, list) else [],
         }
         yield "data: " + json.dumps(done, ensure_ascii=False) + "\n\n"
 

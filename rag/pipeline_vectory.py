@@ -155,6 +155,7 @@ def _body_to_state(
         "timings_ms": body.get("timings_ms"),
         "plan": body.get("plan"),
         "trace": body.get("trace"),
+        "citations": body.get("citations") if isinstance(body.get("citations"), list) else [],
     }
     if draft:
         rag_result["draft_answer"] = draft
