@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 from typing import Optional
@@ -46,7 +47,16 @@ def _route_with_llm(state: MultiAgentState) -> RouteDecision:
 def router_agent(
     state: MultiAgentState, config: Optional[RunnableConfig] = None
 ) -> dict:
-    print("[ROUTER AGENT] Iniciando agente de roteamento...")
+    t_router = time.perf_counter()
+    metadata = (config or {}).get("metadata") or {}
+    invoke_t0 = metadata.get("invoke_t0")
+    if isinstance(invoke_t0, (int, float)):
+        pre_ms = int((t_router - invoke_t0) * 1000)
+        print(
+            f"[ROUTER AGENT] invoke_to_router_ms={pre_ms}",
+            flush=True,
+        )
+    print("[ROUTER AGENT] Iniciando agente de roteamento...", flush=True)
     push_sse(config, {"event": "step", "id": "router", "status": "running"})
     assistant_id = state["assistant_id"]
     if not assistant_id:
@@ -56,13 +66,20 @@ def router_agent(
     source = "llm"
     choice_trace = None
 
+    jev_ms: int | None = None
+    caps_ms: int | None = None
     if USE_JEV_ROUTER:
         try:
+            t_caps = time.perf_counter()
             caps = resolve_capabilities(assistant_id)
+            caps_ms = int((time.perf_counter() - t_caps) * 1000)
+            catalog = caps.router_catalog()
+            t0 = time.perf_counter()
             decision, choice_trace = route_with_jev(
                 messages=state["messages"][-20:],
-                capabilities_catalog=caps.router_catalog(),
+                capabilities_catalog=catalog,
             )
+            jev_ms = int((time.perf_counter() - t0) * 1000)
             source = "jev"
         except JevClientError as exc:
             print(f"[ROUTER AGENT] JEV falhou ({exc}); fallback LLM")
@@ -74,10 +91,17 @@ def router_agent(
     payload = decision_to_payload(
         decision, source=source, choice_trace=choice_trace
     )
+    router_ms = int((time.perf_counter() - t_router) * 1000)
+    timing = ""
+    if caps_ms is not None:
+        timing += f", caps_ms={caps_ms}"
+    if jev_ms is not None:
+        timing += f", jev_ms={jev_ms}"
     print(
         f"[ROUTER AGENT] source={source}, route={payload['route']}, "
-        f"confidence={payload['confidence']:.3f}, "
-        f"trace={payload['trace']}"
+        f"confidence={payload['confidence']:.3f}, router_ms={router_ms}{timing}, "
+        f"trace={payload['trace']}",
+        flush=True,
     )
     push_sse(
         config,

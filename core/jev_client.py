@@ -9,12 +9,26 @@ import httpx
 from core.config import (
     OPENJEV_API_KEY,
     OPENJEV_BASE_URL,
+    OPENJEV_MODEL,
     OPENJEV_TIMEOUT_S,
 )
 
 
 class JevClientError(RuntimeError):
     """Falha HTTP ou payload invalido do OpenJEV."""
+
+
+_http_client: httpx.Client | None = None
+
+
+def _get_http_client() -> httpx.Client:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.Client(
+            timeout=OPENJEV_TIMEOUT_S,
+            limits=httpx.Limits(max_keepalive_connections=8, max_connections=16),
+        )
+    return _http_client
 
 
 def build_systemone_url(base_url: str | None = None) -> str:
@@ -26,7 +40,7 @@ def call_systemone(
     *,
     state: Any,
     questions: dict[str, Any],
-    model: str = "openjev",
+    model: str | None = None,
     base_url: str | None = None,
     api_key: str | None = None,
     timeout_s: float | None = None,
@@ -42,15 +56,19 @@ def call_systemone(
         headers["Authorization"] = f"Bearer {key}"
 
     payload = {
-        "model": model,
+        "model": model or OPENJEV_MODEL,
         "state": state,
         "questions": questions,
     }
     timeout = OPENJEV_TIMEOUT_S if timeout_s is None else timeout_s
 
     try:
-        with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, json=payload, headers=headers)
+        response = _get_http_client().post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=timeout,
+        )
     except httpx.RequestError as exc:
         raise JevClientError(f"rede: {exc}") from exc
 

@@ -1,9 +1,9 @@
 import json
 import queue
 import threading
+import time
 import uuid
 from collections.abc import Iterator
-from contextlib import asynccontextmanager
 
 import uvicorn
 from dotenv import load_dotenv
@@ -16,26 +16,18 @@ from pydantic import BaseModel, Field
 from assistants.registry import get_assistant_by_id, list_assistant_ids
 from core.config import APP_ENV
 from core.hub import build_thread_id, get_graph
-from core.jev_warmup import jev_warmup_loop
 
 load_dotenv()
 
 
-@asynccontextmanager
-async def _lifespan(_app: FastAPI):
-    stop = threading.Event()
-    thread = threading.Thread(
-        target=jev_warmup_loop,
-        args=(stop,),
-        name="jev-warmup",
-        daemon=True,
-    )
-    thread.start()
-    yield
-    stop.set()
+def _warm_startup() -> None:
+    for assistant_id in list_assistant_ids():
+        get_graph(assistant_id)
 
 
-app = FastAPI(title="from-scratch-multiagent API", lifespan=_lifespan)
+_warm_startup()
+
+app = FastAPI(title="from-scratch-multiagent API")
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
@@ -146,7 +138,8 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                             request.assistant_id, session_id
                         ),
                         "token_queue": token_queue,
-                    }
+                    },
+                    "metadata": {"invoke_t0": time.perf_counter()},
                 },
             )
         except Exception as exc:  # noqa: BLE001
