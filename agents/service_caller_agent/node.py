@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import Optional
 
 from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 
 from assistants.capabilities import resolve_capabilities
 from core.llm import llm
+from graph.sse_queue import push_sse
 from graph.state import MultiAgentState
 from flows.registry import flow_name_from_tool
 
@@ -15,8 +18,25 @@ def load_prompt() -> str:
         return file.read()
 
 
-def service_caller_agent(state: MultiAgentState) -> dict:
+def _plain_text(content: object) -> str:
+    if isinstance(content, str):
+        return " ".join(content.split()).strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("text"):
+                parts.append(str(block["text"]))
+        return " ".join(" ".join(parts).split()).strip()
+    return ""
+
+
+def service_caller_agent(
+    state: MultiAgentState, config: Optional[RunnableConfig] = None
+) -> dict:
     print("[TOOL CALLER AGENT] Iniciando agente de chamada de ferramentas...")
+    push_sse(config, {"event": "step", "id": "service_caller", "status": "running"})
 
     assistant_id = state["assistant_id"]
     if not assistant_id:
@@ -30,6 +50,24 @@ def service_caller_agent(state: MultiAgentState) -> dict:
     messages = [SystemMessage(content=system_prompt)] + history
 
     response = llm.bind_tools(list(caps.bindable)).invoke(messages)
+    thought = _plain_text(response.content).split("\n", 1)[0].strip()
+    if response.tool_calls and thought:
+        push_sse(
+            config,
+            {
+                "event": "step",
+                "id": "service_caller",
+                "status": "ok",
+                "detail": thought[:180],
+            },
+        )
+        response = AIMessage(
+            content="",
+            tool_calls=response.tool_calls,
+            id=response.id,
+        )
+    else:
+        push_sse(config, {"event": "step", "id": "service_caller", "status": "ok"})
 
     if not response.tool_calls:
         return {"messages": [response]}
