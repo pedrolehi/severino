@@ -129,7 +129,7 @@ def _fetch_nf(flow_data: dict[str, Any]) -> tuple[str, bool]:
 
     competencia = d.to_mes_ano_exibicao(str(flow_data.get("mes_ano") or ""))
     if result.ok:
-        return d.build_success_message(result.links), True
+        return d.build_success_message(result.links, competencia), True
     if result.not_found:
         return d.build_not_found_message(competencia), False
     return d.build_api_error_message(result.error_detail or "erro desconhecido"), False

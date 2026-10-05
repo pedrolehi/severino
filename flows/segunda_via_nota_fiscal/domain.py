@@ -224,31 +224,24 @@ def fora_sp_message() -> str:
 
 
 def ask_nova_competencia_message() -> str:
-    return (
-        "Deseja receber outra competência de prestação de serviço "
-        "(mês e ano) para este cliente?"
-    )
+    return "Quer outra competência para este mesmo cliente?"
 
 
 def ask_outro_prestador_message() -> str:
-    # original: "2° via" (grau)
-    return (
-        "Deseja receber uma nova 2° via de nota fiscal de serviço para "
-        "outro responsável financeiro (tomador de serviço)"
-    )
+    return "Quer a nota de outro responsável financeiro?"
 
 
 def ask_retry_question() -> str:
-    # original: "Deseja tentar novamente ?" (espaço antes de ?)
-    return "Deseja tentar novamente ?"
+    return "Quer tentar de novo?"
 
 
 def build_not_found_message(mes_ano_exibicao: str | None) -> str:
     competencia = mes_ano_exibicao or "informada"
     return (
-        "Não localizamos notas fiscais para a competência "
-        f"<strong>{competencia}</strong> "
-        "com os dados informados."
+        f"Não encontrei nota fiscal para a competência {competencia}.\n\n"
+        "A prefeitura não devolveu link com a unidade, o responsável financeiro "
+        "e o mês informados.\n\n"
+        "Confira se a competência está em mês/ano e se o CNPJ é o da unidade de São Paulo."
     )
 
 
@@ -258,22 +251,33 @@ def ask_retry_message(competencia: str | None) -> str:
     )
 
 
-def build_success_message(links: list[str]) -> str:
-    links_text = "\n".join(links)
+def build_success_message(links: list[str], competencia: str | None = None) -> str:
+    comp = competencia or "informada"
+    quantidade = len(links)
+    if quantidade == 1:
+        abertura = f"Encontrei a nota da competência {comp}."
+        meio = "Este link abre a segunda via no site da Prefeitura de São Paulo:"
+    else:
+        abertura = f"Encontrei {quantidade} notas da competência {comp}."
+        meio = "Cada link abre uma segunda via no site da Prefeitura de São Paulo:"
+    links_text = "\n\n".join(links)
     return (
-        "Encontramos o(s) link(s) da(s) sua(s) nota(s), "
-        "ao clicar nele(s) você será redirecionado para visualização "
-        "no site da prefeitura de São Paulo. 😊\n\n"
+        f"{abertura}\n\n"
+        f"{meio}\n\n"
         f"{links_text}\n\n"
-        "Para garantirmos a integridade das informações, "
-        "recomendamos que antes do envio da 2a via da nota fiscal "
-        "de serviço eletrônica ao cliente, sejam conferidos os dados "
-        "da nota, conforme o relatório CODEPE extraído do sistema SenacSolution."
+        "Antes de encaminhar ao cliente, confira os dados da nota "
+        "no relatório CODEPE do Senac Solution."
     )
 
 
 def build_api_error_message(detail: str) -> str:
-    return f"Falha ao consultar nota fiscal: {detail}"
+    motivo = detail.strip() or "o serviço não respondeu"
+    return (
+        "Não consegui consultar a nota fiscal agora.\n\n"
+        f"{motivo[:1].upper()}{motivo[1:].rstrip('.')}.\n\n"
+        "Nada foi emitido. Dá para repetir a busca ou ajustar "
+        "a competência, o CNPJ da unidade ou o documento do responsável."
+    )
 
 
 def something_else_message() -> str:

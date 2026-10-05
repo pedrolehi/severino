@@ -60,7 +60,7 @@
     },
     "ask_nova_competencia": {
       "component": "buttons",
-      "text": "Deseja receber outra competência de prestação de serviço (mês e ano) para este cliente?",
+      "text": "Quer outra competência para este mesmo cliente?",
       "buttons": [
         { "label": "Sim", "value": "sim" },
         { "label": "Não", "value": "nao" }
@@ -68,7 +68,7 @@
     },
     "ask_outro_prestador": {
       "component": "buttons",
-      "text": "Deseja receber uma nova 2° via de nota fiscal de serviço para outro responsável financeiro (tomador de serviço)?",
+      "text": "Quer a nota de outro responsável financeiro?",
       "buttons": [
         { "label": "Sim", "value": "sim" },
         { "label": "Não", "value": "nao" }
@@ -76,7 +76,7 @@
     },
     "ask_retry": {
       "component": "buttons",
-      "text": "Deseja tentar novamente ?",
+      "text": "Quer tentar de novo?",
       "buttons": [
         { "label": "Sim", "value": "sim" },
         { "label": "Não", "value": "nao" }
