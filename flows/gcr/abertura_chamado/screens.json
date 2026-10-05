@@ -1,0 +1,34 @@
+{
+  "screens": {
+    "detalhe": {
+      "component": "form",
+      "name": "gcr_abertura_chamado_detalhe",
+      "title": "Dúvidas gerais",
+      "fields": [
+        {
+          "key": "texto",
+          "title": "Detalhe do problema",
+          "widget": "text",
+          "help": "Por favor, detalhe um pouco sobre seu problema.",
+          "placeholder": "Descreva o que aconteceu",
+          "required": true
+        }
+      ]
+    },
+    "anexo": {
+      "component": "form",
+      "name": "gcr_abertura_chamado_anexo",
+      "title": "Anexo",
+      "fields": [
+        {
+          "key": "anexo",
+          "title": "Selecione o arquivo",
+          "widget": "file",
+          "help": "Envie um arquivo para complementar o chamado.",
+          "required": true,
+          "maxSizeMb": 10
+        }
+      ]
+    }
+  }
+}

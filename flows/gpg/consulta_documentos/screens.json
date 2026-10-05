@@ -1,0 +1,19 @@
+{
+  "screens": {
+    "keyword": {
+      "component": "form",
+      "name": "gpg_consulta_documentos_keyword",
+      "title": "Consulta de documentos",
+      "fields": [
+        {
+          "key": "keyword",
+          "title": "Palavra-chave",
+          "widget": "text",
+          "help": "Informe o termo para buscar no SisNormas.",
+          "placeholder": "Ex.: férias",
+          "required": true
+        }
+      ]
+    }
+  }
+}

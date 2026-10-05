@@ -5,7 +5,18 @@ ASSISTANT = define_assistant(
     name="Intranet",
     description="Assistente para o Intranet do Funcionário Senac",
     tool_module_names=["academic"],
-    flow_module_names=["segunda_via_boleto", "segunda_via_nota_fiscal"],
+    flow_module_names=[
+        "segunda_via_boleto",
+        "segunda_via_nota_fiscal",
+        "saldo_de_horas",
+        "consulta_documentos",
+        "centro_de_custo",
+        "relatorios_financeiros",
+        "gcr_abertura_chamado",
+        "gep_abertura_chamado",
+        "gef_abertura_chamado",
+        "geduc_abertura_chamado",
+    ],
     rag=RagBinding(
         # slug/UUID no Mongo `projects` — collection via APP_ENV / --env
         project_id="intranet",

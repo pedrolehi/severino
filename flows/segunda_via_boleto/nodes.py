@@ -31,6 +31,7 @@ def segunda_via_boleto_node(state: MultiAgentState) -> dict:
         return {
             "active_flow": None,
             "flow_step": None,
+            "service_target": None,
             "flow_data": {
                 "raw_input": user_text,
             },
@@ -48,6 +49,7 @@ def segunda_via_boleto_node(state: MultiAgentState) -> dict:
     return {
         "active_flow": None,
         "flow_step": None,
+        "service_target": None,
         "messages": [
             AIMessage(
                 content="Desculpe, não consegui processar sua solicitação. Por favor, tente novamente."

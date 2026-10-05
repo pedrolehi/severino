@@ -8,6 +8,7 @@ class MultiAgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
     user_id: str | None
+    user_info: dict | None
     session_id: str | None
     assistant_id: str | None
     app_env: str | None

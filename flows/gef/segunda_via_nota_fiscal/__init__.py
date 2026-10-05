@@ -1,5 +1,5 @@
 from flows.flow_contract import define_flow
-from flows.segunda_via_nota_fiscal.nodes import segunda_via_nota_fiscal_node
+from flows.gef.segunda_via_nota_fiscal.nodes import segunda_via_nota_fiscal_node
 
 
 def build_segunda_via_nota_fiscal_flow():

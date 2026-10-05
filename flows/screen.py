@@ -4,7 +4,9 @@ component:
   buttons — text + buttons[{label, value}]
   form — title, name, fields[{key, title, widget, validationType, help, placeholder, required}]
 
+widget: text | file | select | date
 validationType é prop. O título do campo fica limpo.
+select exige options[{label, value}]. date vira DateWidget.
 """
 
 from __future__ import annotations
@@ -14,7 +16,12 @@ from pathlib import Path
 from typing import Any
 
 _COMPONENTS = {"buttons", "form"}
-_WIDGETS = {"text": "TextWidget"}
+_WIDGETS = {
+    "text": "TextWidget",
+    "file": "FileWidget",
+    "select": "ComboboxWidget",
+    "date": "DateWidget",
+}
 
 
 def load_screens(path: Path) -> dict[str, dict[str, Any]]:
@@ -84,6 +91,15 @@ def _validate_screen(filename: str, name: str, screen: dict[str, Any]) -> None:
         widget = str(field.get("widget") or "text")
         if widget not in _WIDGETS:
             raise ValueError(f"{filename}: tela {name} widget {widget} invalido")
+        if widget == "select":
+            options = field.get("options")
+            if not isinstance(options, list) or not options:
+                raise ValueError(f"{filename}: tela {name} select {key} sem options")
+            for option in options:
+                if not str(option.get("label") or "").strip():
+                    raise ValueError(f"{filename}: tela {name} select {key} sem label")
+                if not str(option.get("value") or "").strip():
+                    raise ValueError(f"{filename}: tela {name} select {key} sem value")
 
 
 def _render_form(screen: dict[str, Any]) -> dict[str, Any]:
@@ -93,15 +109,37 @@ def _render_form(screen: dict[str, Any]) -> dict[str, Any]:
     for field in screen["fields"]:
         key = str(field["key"])
         title = str(field["title"])
-        widget = _WIDGETS[str(field.get("widget") or "text")]
+        widget_key = str(field.get("widget") or "text")
+        widget = _WIDGETS[widget_key]
         ui_schema["ui:order"].append(key)
-        properties[key] = {"type": "string", "title": title}
+        if widget_key == "file":
+            properties[key] = {
+                "type": "array",
+                "title": title,
+                "format": "wxo-file",
+                "file_types": list(field.get("fileTypes") or []),
+                "file_max_size": int(field.get("maxSizeMb") or 10),
+            }
+        elif widget_key == "select":
+            options = list(field.get("options") or [])
+            values = [str(option["value"]) for option in options]
+            labels = [str(option["label"]) for option in options]
+            properties[key] = {
+                "type": "string",
+                "title": title,
+                "enum": values,
+                "display_text": {"choices": values, "display_text": labels},
+            }
+        else:
+            properties[key] = {"type": "string", "title": title}
         field_ui: dict[str, Any] = {
             "ui:title": title,
             "ui:widget": widget,
             "ui:help": str(field.get("help") or ""),
             "ui:placeholder": str(field.get("placeholder") or ""),
         }
+        if widget_key == "date":
+            field_ui["format"] = str(field.get("format") or "YYYY-MM-DD")
         validation_type = str(field.get("validationType") or "").strip()
         if validation_type:
             field_ui["ui:options"] = {"validationType": validation_type}

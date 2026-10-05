@@ -1,0 +1,30 @@
+{
+  "screens": {
+    "data": {
+      "component": "form",
+      "name": "relatorios_financeiros_data",
+      "title": "Relatórios financeiros",
+      "fields": [
+        {
+          "key": "dataRelatorio",
+          "title": "Selecione a data",
+          "widget": "date",
+          "required": true
+        }
+      ]
+    },
+    "data_fim": {
+      "component": "form",
+      "name": "relatorios_financeiros_data_fim",
+      "title": "Relatórios financeiros",
+      "fields": [
+        {
+          "key": "dataRelatorioFim",
+          "title": "Agora selecione a data final do período que deseja emitir os relatórios. Lembrando que ela sempre deve ser anterior a data de hoje!",
+          "widget": "date",
+          "required": true
+        }
+      ]
+    }
+  }
+}

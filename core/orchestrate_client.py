@@ -15,6 +15,15 @@ DEFAULT_TIMEOUT = 30.0
 
 
 @dataclass(frozen=True, slots=True)
+class CallResult:
+    ok: bool
+    payload: Any = None
+    status_code: int = 200
+    error_detail: str | None = None
+    ticket_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class NotaFiscalResult:
     ok: bool
     links: list[str] = field(default_factory=list)
@@ -138,6 +147,102 @@ class OrchestrateClient:
             )
         return NotaFiscalResult(ok=True, links=links, status_code=200)
 
+    def _call(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+    ) -> CallResult:
+        url = f"{self._base_url}{path}"
+        logger.info("orchestrate.%s %s", method, url)
+        try:
+            response = httpx.request(
+                method,
+                url,
+                params=params,
+                json=body,
+                timeout=self._timeout,
+            )
+        except httpx.HTTPError as exc:
+            logger.error("orchestrate transport_error: %s", exc)
+            return _unavailable()
+
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"raw": (response.text or "")[:400]}
+
+        if response.status_code >= 400:
+            detail = payload.get("error") if isinstance(payload, dict) else None
+            return CallResult(
+                ok=False,
+                payload=payload,
+                status_code=response.status_code,
+                error_detail=str(
+                    detail or (response.text or "")[:200] or response.reason_phrase
+                ),
+            )
+
+        if isinstance(payload, dict):
+            status = payload.get("status")
+            error = payload.get("error")
+            if error and status not in (None, 200, "200"):
+                return CallResult(
+                    ok=False,
+                    payload=payload,
+                    status_code=int(status) if str(status).isdigit() else response.status_code,
+                    error_detail=str(error),
+                )
+        return CallResult(
+            ok=True,
+            payload=payload,
+            status_code=response.status_code,
+            ticket_id=_ticket_id(payload),
+        )
+
+    def get_saldo_horas(self, chapa: str) -> CallResult:
+        return self._call("GET", f"/gep/saldo-horas/{chapa}")
+
+    def consulta_documentos(self, *, chapa: str, keyword: str) -> CallResult:
+        return self._call(
+            "POST",
+            "/gpg/consulta-documentos",
+            body={"chapa": chapa, "keyword": keyword, "qt": "search", "range": 0},
+        )
+
+    def get_json(self, path: str, params: dict[str, Any] | None = None) -> CallResult:
+        return self._call("GET", path, params=params)
+
+    def post_json(self, path: str, body: dict[str, Any]) -> CallResult:
+        return self._call("POST", path, body=body)
+
+
+def _ticket_id(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    for key in ("ticketId", "NUM_CHAMADO", "protocolo", "WSCHAMADO"):
+        value = payload.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    for key in ("data", "M4"):
+        found = _ticket_id(payload.get(key))
+        if found:
+            return found
+    dados = payload.get("DADOS")
+    if isinstance(dados, dict):
+        return _ticket_id(dados)
+    return None
+
+
+def _unavailable() -> CallResult:
+    return CallResult(
+        ok=False,
+        status_code=503,
+        error_detail="serviço de integração temporariamente indisponível",
+    )
+
 
 class MockOrchestrateClient:
     def get_nota_fiscal(
@@ -157,6 +262,75 @@ class MockOrchestrateClient:
                 "https://nfe.prefeitura.sp.gov.br/contribuinte/notaprint.aspx?nf=123&verificacao=ABC"
             ],
         )
+
+    def get_saldo_horas(self, chapa: str) -> CallResult:
+        return CallResult(
+            ok=True,
+            payload={"Saldo Anterior": "10:00", "Saldo Atual": "08:00", "chapa": chapa},
+        )
+
+    def consulta_documentos(self, *, chapa: str, keyword: str) -> CallResult:
+        return CallResult(
+            ok=True,
+            payload={
+                "chapa": chapa,
+                "resultDocumentos": {
+                    "strDocumentos": f"Documento de exemplo para {keyword}.",
+                },
+            },
+        )
+
+    def get_json(self, path: str, params: dict[str, Any] | None = None) -> CallResult:
+        if path == "/gef/lista-origem":
+            options = [{"label": "Presencial", "value": "Presencial"}]
+            return CallResult(ok=True, payload={"status": 200, "options": options})
+        if path == "/gef/lista-modalidade":
+            options = [{"label": "Curso técnico", "value": "Curso técnico"}]
+            return CallResult(ok=True, payload={"status": 200, "options": options})
+        if path == "/gef/lista-curso":
+            options = [{"label": "Administração", "value": "Administração"}]
+            return CallResult(ok=True, payload={"status": 200, "options": options})
+        if path == "/gef/lista-ficha-tecnica":
+            return CallResult(
+                ok=True,
+                payload={
+                    "status": 200,
+                    "list": [
+                        [
+                            "Centro de custo: 123. Título: Administração.",
+                            "123",
+                        ]
+                    ],
+                },
+            )
+        if path == "/gef/relatorios/conciliacao-caixa/lista":
+            return CallResult(
+                ok=True,
+                payload={
+                    "status": 200,
+                    "data": {
+                        "data": {
+                            "DADOS": [
+                                {
+                                    "caixa": "01",
+                                    "registradora": "1",
+                                    "descrCaixa": "Caixa teste",
+                                }
+                            ]
+                        }
+                    },
+                },
+            )
+        return CallResult(ok=True, payload={"status": 200, "params": params or {}, "path": path})
+
+    def post_json(self, path: str, body: dict[str, Any]) -> CallResult:
+        if "abertura-chamado" in path or path.endswith("/relatorios/solicitar"):
+            return CallResult(
+                ok=False,
+                status_code=503,
+                error_detail="mock não devolve protocolo",
+            )
+        return CallResult(ok=True, payload={"status": 200, "body": body, "path": path})
 
 
 def create_orchestrate_client() -> OrchestrateClient | MockOrchestrateClient:

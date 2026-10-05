@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from assistants.registry import get_assistant_by_id, list_assistant_ids
 from core.config import APP_ENV
 from core.hub import build_thread_id, get_graph
+from flows.session import normalize_user_info
 
 load_dotenv()
 
@@ -41,6 +42,7 @@ class ChatRequest(BaseModel):
     assistant_id: str = "intranet"
     user_id: str | None = None
     session_id: str | None = None
+    user_info: dict | None = None
 
 
 class ChatResponse(BaseModel):
@@ -100,6 +102,9 @@ def _prepare(request: ChatRequest) -> tuple[str, dict, dict]:
         "app_env": APP_ENV or "dev",
         "messages": [HumanMessage(content=request.message)],
     }
+    user_info = normalize_user_info(request.user_info)
+    if user_info:
+        payload["user_info"] = user_info
     return session_id, graph, payload
 
 

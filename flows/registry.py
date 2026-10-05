@@ -18,6 +18,41 @@ class FlowSpec(TypedDict):
 SKIP_MODULES = {"entry", "registry", "flow_contract", "runtime"}
 
 
+def _name_matches(folder_name: str, flow_name: str, group_name: str | None) -> bool:
+    if flow_name == folder_name:
+        return True
+    if group_name and flow_name == f"{group_name}_{folder_name}":
+        return True
+    return False
+
+
+def _register_flow(
+    flows: dict[str, FlowSpec],
+    folder_name: str,
+    import_path: str,
+    group_name: str | None = None,
+) -> bool:
+    module = importlib.import_module(import_path)
+    registration = getattr(module, "FLOW", None)
+    if registration is None:
+        return False
+    if not isinstance(registration, FlowRegistration):
+        raise RuntimeError(
+            f"{import_path} must export FLOW as a FlowRegistration"
+        )
+    if not _name_matches(folder_name, registration.name, group_name):
+        raise RuntimeError(
+            f"{import_path}: folder name must match FLOW.name ({registration.name})"
+        )
+    if registration.name in flows:
+        raise RuntimeError(f"duplicate flow name: {registration.name}")
+    flows[registration.name] = {
+        "builder": registration.builder,
+        "description": registration.description,
+    }
+    return True
+
+
 def _discover_flows() -> dict[str, FlowSpec]:
     flows: dict[str, FlowSpec] = {}
     package = importlib.import_module("flows")
@@ -26,27 +61,20 @@ def _discover_flows() -> dict[str, FlowSpec]:
         if module_name.startswith("_") or module_name in SKIP_MODULES or not ispkg:
             continue
 
-        module = importlib.import_module(f"flows.{module_name}")
-        registration = getattr(module, "FLOW", None)
+        import_path = f"flows.{module_name}"
+        if _register_flow(flows, module_name, import_path):
+            continue
 
-        if not isinstance(registration, FlowRegistration):
-            raise RuntimeError(
-                f"flows.{module_name} must export FLOW as a FlowRegistration"
+        group = importlib.import_module(import_path)
+        for _, child_name, child_is_pkg in pkgutil.iter_modules(group.__path__):
+            if child_name.startswith("_") or not child_is_pkg:
+                continue
+            _register_flow(
+                flows,
+                child_name,
+                f"{import_path}.{child_name}",
+                group_name=module_name,
             )
-
-        if module_name != registration.name:
-            raise RuntimeError(
-                f"flows.{module_name}: folder name must match FLOW.name"
-                f"({registration.name})"
-            )
-
-        if registration.name in flows:
-            raise RuntimeError(f"duplicate flow name: {registration.name}")
-
-        flows[registration.name] = {
-            "builder": registration.builder,
-            "description": registration.description,
-        }
     return flows
 
 

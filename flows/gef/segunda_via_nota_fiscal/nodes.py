@@ -10,7 +10,7 @@ from langchain_core.messages import AIMessage
 from core.orchestrate_client import create_orchestrate_client
 from flows.runtime import unexpected_input
 from flows.screen import load_screens, render_screen, screen_text
-from flows.segunda_via_nota_fiscal import domain as d
+from flows.gef.segunda_via_nota_fiscal import domain as d
 from graph.state import MultiAgentState
 
 SCREENS = load_screens(Path(__file__).with_name("screens.json"))
@@ -64,6 +64,7 @@ def _done(
         "active_flow": None,
         "flow_step": None,
         "flow_data": flow_data or {},
+        "service_target": None,
         "messages": [_ai(message, ui)],
     }
 

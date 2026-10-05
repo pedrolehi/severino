@@ -115,6 +115,7 @@ def _handle_confirm_exit(state: dict[str, Any]) -> dict[str, Any]:
             "active_flow": None,
             "flow_step": None,
             "flow_data": {},
+            "service_target": None,
             "messages": [AIMessage(content=left_service_message())],
         }
 

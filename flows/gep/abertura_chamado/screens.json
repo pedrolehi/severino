@@ -1,0 +1,40 @@
+{
+  "screens": {
+    "detalhe": {
+      "component": "form",
+      "name": "gep_abertura_chamado_detalhe",
+      "title": "Abertura de chamado GEP",
+      "fields": [
+        {
+          "key": "tema",
+          "title": "Tema",
+          "widget": "text",
+          "help": "Obrigatório em Benefícios. Nos outros assuntos pode ficar em branco.",
+          "required": false
+        },
+        {
+          "key": "texto",
+          "title": "Detalhe do problema",
+          "widget": "text",
+          "help": "Descreva a solicitação.",
+          "placeholder": "Descreva o que aconteceu",
+          "required": true
+        }
+      ]
+    },
+    "anexo": {
+      "component": "form",
+      "name": "gep_abertura_chamado_anexo",
+      "title": "Anexo",
+      "fields": [
+        {
+          "key": "anexo",
+          "title": "Selecione o arquivo",
+          "widget": "file",
+          "required": true,
+          "maxSizeMb": 10
+        }
+      ]
+    }
+  }
+}

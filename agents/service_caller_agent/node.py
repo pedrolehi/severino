@@ -44,7 +44,7 @@ def service_caller_agent(
         )
 
     if not response.tool_calls:
-        return {"messages": [response]}
+        return {"service_target": None, "messages": [response]}
 
     tool_call = response.tool_calls[0]
     tool_name = tool_call["name"]
@@ -55,6 +55,7 @@ def service_caller_agent(
     if flow_name:
         if flow_name not in caps.flow_names:
             return {
+                "service_target": None,
                 "messages": [
                     AIMessage(
                         content=f"O fluxo {flow_name} não existe ou não está disponível para o assistente {assistant_id}."
@@ -77,5 +78,6 @@ def service_caller_agent(
         return {"service_target": None, "messages": [response]}
 
     return {
-        "messages": [AIMessage(content="Não encontrei a ferramenta ou fluxo alvo.")]
+        "service_target": None,
+        "messages": [AIMessage(content="Não encontrei a ferramenta ou fluxo alvo.")],
     }
