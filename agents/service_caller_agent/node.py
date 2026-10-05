@@ -1,14 +1,13 @@
 from pathlib import Path
-from typing import Optional
 
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 
 from assistants.capabilities import resolve_capabilities
 from core.llm import llm
+from flows.registry import flow_name_from_tool
 from graph.sse_queue import push_sse
 from graph.state import MultiAgentState
-from flows.registry import flow_name_from_tool
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "service_caller_prompt.txt"
 
@@ -19,7 +18,7 @@ def load_prompt() -> str:
 
 
 def service_caller_agent(
-    state: MultiAgentState, config: Optional[RunnableConfig] = None
+    state: MultiAgentState, config: RunnableConfig | None = None
 ) -> dict:
     print("[TOOL CALLER AGENT] Iniciando agente de chamada de ferramentas...")
     push_sse(config, {"event": "step", "id": "service_caller", "status": "running"})
