@@ -7,11 +7,20 @@ from typing import Any
 
 from langchain_core.messages import AIMessage
 
+from flows.screen import render_screen
+
 STEP_CONFIRM_EXIT = "__confirm_exit__"
 FLOW_CONTROL_UNEXPECTED = "unexpected_input"
 
 _RESUME_STEP_KEY = "_resume_step"
 _RESUME_PROMPT_KEY = "_resume_prompt"
+_RESUME_UI_KEY = "_resume_ui"
+_RESUME_KEYS = {
+    _RESUME_STEP_KEY,
+    _RESUME_PROMPT_KEY,
+    _RESUME_UI_KEY,
+    "_service_label",
+}
 
 
 def parse_boolean(text: str) -> bool | None:
@@ -37,6 +46,27 @@ def stay_in_service_prefix() -> str:
 
 def left_service_message() -> str:
     return "Precisa de ajuda em algo mais?"
+
+
+def _yes_no_ui(text: str) -> list[dict[str, Any]]:
+    return [
+        render_screen(
+            {
+                "component": "buttons",
+                "text": text,
+                "buttons": [
+                    {"label": "Sim", "value": "sim"},
+                    {"label": "Não", "value": "nao"},
+                ],
+            }
+        )
+    ]
+
+
+def _ai(content: str, ui: list[dict[str, Any]] | None = None) -> AIMessage:
+    if not ui:
+        return AIMessage(content=content)
+    return AIMessage(content=content, additional_kwargs={"ui": ui})
 
 
 def unexpected_input(
@@ -70,19 +100,14 @@ def _handle_confirm_exit(state: dict[str, Any]) -> dict[str, Any]:
 
     answer = parse_boolean(user_text)
     if answer is None:
+        prompt = confirm_exit_message(
+            service_label=str(service_label) if service_label else None
+        )
         return {
             "active_flow": active_flow,
             "flow_step": STEP_CONFIRM_EXIT,
             "flow_data": flow_data,
-            "messages": [
-                AIMessage(
-                    content=confirm_exit_message(
-                        service_label=str(service_label)
-                        if service_label
-                        else None
-                    )
-                )
-            ],
+            "messages": [_ai(prompt, _yes_no_ui(prompt))],
         }
 
     if answer:
@@ -95,18 +120,21 @@ def _handle_confirm_exit(state: dict[str, Any]) -> dict[str, Any]:
 
     resume_step = str(flow_data.get(_RESUME_STEP_KEY) or "")
     resume_prompt = str(flow_data.get(_RESUME_PROMPT_KEY) or "")
+    resume_ui = flow_data.get(_RESUME_UI_KEY)
     resume_data = {
-        k: v
-        for k, v in flow_data.items()
-        if k not in {_RESUME_STEP_KEY, _RESUME_PROMPT_KEY, "_service_label"}
+        k: v for k, v in flow_data.items() if k not in _RESUME_KEYS
     }
+    prefix = stay_in_service_prefix().strip()
+    ui: list[dict[str, Any]] = [{"response_type": "text", "text": prefix}]
+    if isinstance(resume_ui, list) and resume_ui:
+        ui.extend(item for item in resume_ui if isinstance(item, dict))
+    else:
+        ui.extend(_yes_no_ui(resume_prompt) if resume_prompt else [])
     return {
         "active_flow": active_flow,
         "flow_step": resume_step or None,
         "flow_data": resume_data,
-        "messages": [
-            AIMessage(content=stay_in_service_prefix() + resume_prompt)
-        ],
+        "messages": [_ai(prefix + "\n\n" + resume_prompt, ui)],
     }
 
 
@@ -130,13 +158,10 @@ def _to_confirm_exit(result: dict[str, Any]) -> dict[str, Any]:
     }
     cleaned["flow_step"] = STEP_CONFIRM_EXIT
     cleaned["flow_data"] = flow_data
-    cleaned["messages"] = [
-        AIMessage(
-            content=confirm_exit_message(
-                service_label=str(service_label) if service_label else None
-            )
-        )
-    ]
+    prompt = confirm_exit_message(
+        service_label=str(service_label) if service_label else None
+    )
+    cleaned["messages"] = [_ai(prompt, _yes_no_ui(prompt))]
     return cleaned
 
 

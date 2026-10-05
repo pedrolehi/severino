@@ -12,12 +12,13 @@ class Route(str, Enum):
 
 ROUTE_DESCRIPTIONS: dict[Route, str] = {
     Route.RAG: (
-        "RAG - perguntas informativas (como fazer, políticas, procedimentos, documentação). "
-        "Use quando o usuário quer saber/como proceder, sem tool ou flow correspondente."
+        "RAG - perguntas informativas (políticas, procedimentos, documentação). "
+        "Use quando NÃO houver tool ou flow em capabilities para a ação pedida."
     ),
     Route.SERVICES: (
-        "SERVICES - executar ação via tool ou flow listada em capabilities "
-        "(ex.: boleto, consulta de status)"
+        "SERVICES - iniciar ou executar tool/flow listada em capabilities. "
+        "Inclui 'como emitir', 'como solicitar', 'quero a segunda via' quando o tema "
+        "bate com um flow (ex.: nota fiscal, boleto)."
     ),
     Route.FALLBACK: (
         "FALLBACK - cumprimentos, conversa geral ou assunto fora do escopo "

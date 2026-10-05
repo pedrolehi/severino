@@ -9,8 +9,8 @@ def build_segunda_via_nota_fiscal_flow():
 FLOW = define_flow(
     name="segunda_via_nota_fiscal",
     description=(
-        "Emissão de segunda via de nota fiscal de serviço "
-        "do município de São Paulo (GEF)"
+        "Emitir ou solicitar a segunda via da nota fiscal de serviço "
+        "do município de São Paulo (GEF). Inclui 'como posso emitir minha nota fiscal'."
     ),
     builder=build_segunda_via_nota_fiscal_flow,
 )

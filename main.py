@@ -48,6 +48,7 @@ class ChatResponse(BaseModel):
     session_id: str
     response: str
     route: str | None = None
+    ui: list[dict] | None = None
 
 
 def _route_from_result(result: dict) -> str | None:
@@ -58,7 +59,7 @@ def _route_from_result(result: dict) -> str | None:
     return route if isinstance(route, str) else None
 
 
-def _response_text(result: dict) -> str:
+def _last_ai_message(result: dict) -> AIMessage:
     messages = result.get("messages") or []
     last_ai = next(
         (message for message in reversed(messages) if isinstance(message, AIMessage)),
@@ -68,8 +69,20 @@ def _response_text(result: dict) -> str:
         raise HTTPException(
             status_code=500, detail="Grafo não retornou mensagem do assistente"
         )
-    content = last_ai.content
+    return last_ai
+
+
+def _response_text(result: dict) -> str:
+    content = _last_ai_message(result).content
     return content if isinstance(content, str) else str(content)
+
+
+def _response_ui(result: dict) -> list[dict] | None:
+    raw = (_last_ai_message(result).additional_kwargs or {}).get("ui")
+    if not isinstance(raw, list):
+        return None
+    ui = [item for item in raw if isinstance(item, dict)]
+    return ui or None
 
 
 def _prepare(request: ChatRequest) -> tuple[str, dict, dict]:
@@ -117,6 +130,7 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
         session_id=session_id,
         response=_response_text(result),
         route=_route_from_result(result),
+        ui=_response_ui(result),
     )
 
 
@@ -170,6 +184,7 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
         result = holder.get("result") or {}
         try:
             response_text = _response_text(result)
+            response_ui = _response_ui(result)
         except HTTPException as exc:
             yield (
                 "data: "
@@ -189,6 +204,7 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
             "response": response_text,
             "route": _route_from_result(result),
             "citations": citations if isinstance(citations, list) else [],
+            "ui": response_ui,
         }
         yield "data: " + json.dumps(done, ensure_ascii=False) + "\n\n"
 

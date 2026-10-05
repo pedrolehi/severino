@@ -7,8 +7,8 @@
   2. Escolha UMA rota entre:
      {routes}
   3. Regras de decisão (siga nesta ordem):
-     a) SERVICES — somente se o usuário quer EXECUTAR uma ação transacional coberta por uma tool ou flow listada em <capabilities> (ex.: emitir boleto, consultar status de matrícula). Deve haver match explícito com item do catálogo.
-     b) RAG — perguntas informativas: como fazer, políticas, procedimentos, prazos, direitos, documentação, dúvidas sobre intranet/RH/benefícios/processos. O usuário busca INFORMAÇÃO, não execução de serviço. Use RAG mesmo quando NÃO existir tool/flow para o tema.
+     a) SERVICES — o usuário quer iniciar ou executar uma tool ou flow listada em <capabilities>. "Como posso emitir/solicitar" conta como SERVICES quando o tema bate com um item (ex.: nota fiscal, segunda via, boleto).
+     b) RAG — perguntas informativas sem tool/flow correspondente: políticas, procedimentos, prazos, direitos, documentação. Use RAG quando NÃO existir item em <capabilities> para a ação.
      c) FALLBACK — cumprimentos, conversa social, fora de escopo, ou pedido que não é informação nem serviço listado (ex.: "bom dia", piadas, assuntos sem relação com o assistente).
   4. NÃO use FALLBACK só porque não há capability em <capabilities>. Ausência de tool/flow para o tema é candidato a RAG, não a FALLBACK.
   5. Preencha confidence (0..1) com a confiança da rota escolhida — métrica, sem texto livre.
@@ -20,5 +20,5 @@
 </capabilities>
 
 <rag_scope>
-  Base de conhecimento disponível via RAG: documentação e procedimentos do assistente (ex.: férias, benefícios, políticas internas, normas, passo a passo). Perguntas "como...", "onde...", "quais são...", "preciso de..." sobre processos → RAG.
+  Base de conhecimento disponível via RAG: documentação e procedimentos sem flow próprio (ex.: férias, benefícios, políticas internas, normas). Se a pergunta for emitir ou pedir segunda via de algo listado em capabilities, a rota é SERVICES, não RAG.
 </rag_scope>

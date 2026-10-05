@@ -1,0 +1,86 @@
+{
+  "screens": {
+    "ask_sp": {
+      "component": "buttons",
+      "text": "Deseja emitir a 2a via da nota fiscal do município de São Paulo?",
+      "buttons": [
+        { "label": "Sim", "value": "sim" },
+        { "label": "Não", "value": "nao" }
+      ]
+    },
+    "collect": {
+      "component": "form",
+      "name": "segunda_via_nota_fiscal",
+      "title": "Solicitação de segunda via de nota fiscal",
+      "fields": [
+        {
+          "key": "cnpj_senac",
+          "title": "CNPJ da Unidade",
+          "widget": "text",
+          "validationType": "CNPJ_SIGLA",
+          "help": "Informe o CNPJ da unidade do município de São Paulo ou a sigla da unidade na capital.",
+          "placeholder": "Ex.: 00.000.000/0000-00",
+          "required": true
+        },
+        {
+          "key": "cnpj_cliente",
+          "title": "CNPJ ou CPF do responsável financeiro",
+          "widget": "text",
+          "validationType": "CNPJ_OU_CPF",
+          "help": "Informe o CNPJ ou CPF do responsável financeiro (tomador de serviço).",
+          "placeholder": "Ex. CNPJ: 00.000.000/0000-00 Ex. CPF : 000.000.000-00",
+          "required": true
+        },
+        {
+          "key": "mes_ano",
+          "title": "Competência",
+          "widget": "text",
+          "validationType": "MES_ANO",
+          "help": "Informe a competência fiscal.",
+          "placeholder": "03/2024",
+          "required": true
+        }
+      ]
+    },
+    "collect_mes": {
+      "component": "form",
+      "name": "segunda_via_nota_fiscal_mes",
+      "title": "Informe a nova competência (mês e ano)",
+      "fields": [
+        {
+          "key": "mes_ano",
+          "title": "Competência",
+          "widget": "text",
+          "validationType": "MES_ANO",
+          "help": "Informe a competência fiscal.",
+          "placeholder": "03/2024",
+          "required": true
+        }
+      ]
+    },
+    "ask_nova_competencia": {
+      "component": "buttons",
+      "text": "Deseja receber outra competência de prestação de serviço (mês e ano) para este cliente?",
+      "buttons": [
+        { "label": "Sim", "value": "sim" },
+        { "label": "Não", "value": "nao" }
+      ]
+    },
+    "ask_outro_prestador": {
+      "component": "buttons",
+      "text": "Deseja receber uma nova 2° via de nota fiscal de serviço para outro responsável financeiro (tomador de serviço)?",
+      "buttons": [
+        { "label": "Sim", "value": "sim" },
+        { "label": "Não", "value": "nao" }
+      ]
+    },
+    "ask_retry": {
+      "component": "buttons",
+      "text": "Deseja tentar novamente ?",
+      "buttons": [
+        { "label": "Sim", "value": "sim" },
+        { "label": "Não", "value": "nao" }
+      ]
+    }
+  }
+}

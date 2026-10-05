@@ -52,9 +52,10 @@ def build_router_state(
         "capabilities": capabilities_catalog.strip(),
         "routing_rules": (
             "Pick ONE route. Priority: "
-            "(1) services — only if user wants to EXECUTE a transactional action "
-            "covered by an item in `capabilities`; "
-            "(2) rag — informative questions (how/what/policy/process/docs); "
+            "(1) services — user wants to start or run an action that matches a "
+            "tool or flow in `capabilities`, including 'como posso emitir/solicitar' "
+            "(ex.: nota fiscal, segunda via, boleto); "
+            "(2) rag — informative questions with NO matching item in `capabilities`; "
             "(3) fallback — greetings, chit-chat, or out of scope. "
             "Missing capability for a topic is NOT fallback — prefer rag."
         ),

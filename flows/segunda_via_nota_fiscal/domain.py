@@ -5,6 +5,7 @@ Textos alinhados a Flow_GEF_Segunda_via_nota_fiscal.json (senac-multiagent).
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -87,6 +88,19 @@ def normalize_mes_ano(value: str | None) -> str | None:
     return None
 
 
+def parse_mes_ano_input(text: str) -> str | None:
+    raw = (text or "").strip()
+    data = form_data_of(raw)
+    if data:
+        value = _first_value(data, "mes_ano", "Competência")
+        if value and parse_mes_ano(value):
+            return value
+        return None
+    if parse_mes_ano(raw):
+        return raw
+    return None
+
+
 def parse_mes_ano(mes_ano: str) -> tuple[str, str] | None:
     normalized = normalize_mes_ano(mes_ano)
     if not normalized or "-" not in normalized:
@@ -114,9 +128,61 @@ def resolve_cnpj_senac(value: str | None) -> str | None:
     return str(value).strip()
 
 
+def parse_form_body(text: str) -> dict[str, Any] | None:
+    raw = (text or "").strip()
+    if not raw.startswith("{"):
+        return None
+    try:
+        body = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(body, dict) or not isinstance(body.get("form_data"), dict):
+        return None
+    return body
+
+
+def form_data_of(text: str) -> dict[str, Any]:
+    body = parse_form_body(text)
+    if body is None:
+        return {}
+    data = body.get("form_data")
+    return data if isinstance(data, dict) else {}
+
+
+def is_form_cancel(text: str) -> bool:
+    body = parse_form_body(text)
+    return bool(body and body.get("form_operation") == "cancel")
+
+
+def _first_value(data: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = data.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
 def parse_coleta_text(text: str) -> dict[str, str] | None:
     raw = (text or "").strip()
     if not raw:
+        return None
+
+    data = form_data_of(raw)
+    if data:
+        slots = {
+            "cnpj_senac": _first_value(data, "cnpj_senac", "CNPJ da Unidade"),
+            "cnpj_cliente": _first_value(
+                data,
+                "cnpj_cliente",
+                "CNPJ ou CPF do responsável financeiro",
+            ),
+            "mes_ano": _first_value(data, "mes_ano", "Competência"),
+        }
+        if slots["cnpj_senac"] and slots["cnpj_cliente"] and slots["mes_ano"]:
+            return slots
         return None
 
     parts = re.split(r"[,|;]", raw)
