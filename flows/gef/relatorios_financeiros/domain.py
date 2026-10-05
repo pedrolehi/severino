@@ -30,12 +30,12 @@ LISTA = (
     "- Reversão de encargos\n"
     "- Reversão de pagamentos\n"
     "- Transações pix\n\n"
-    "Os relatórios “Matrícula por data”, “Não processados” e "
+    "> Os relatórios “Matrícula por data”, “Não processados” e "
     "“Prorrogação de encargos” não fazem parte do movimento financeiro diário, "
     "porém serão enviados para acompanhamento da unidade."
 )
 AVISO = (
-    "O relatório de Dados e Status de Estudantes deverá ser emitido pela unidade "
+    "> O relatório de Dados e Status de Estudantes deverá ser emitido pela unidade "
     "em caso de oferta cancelada pelo Senac."
 )
 ASK_EMITIR = "Deseja emitir os relatórios?"
