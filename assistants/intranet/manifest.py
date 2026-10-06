@@ -14,7 +14,9 @@ ASSISTANT = define_assistant(
         "relatorios_financeiros",
         "gcr_abertura_chamado",
         "gep_abertura_chamado",
-        "gef_abertura_chamado",
+        "gef_gestao_pagamentos",
+        "gef_relatorios_orcamentarios",
+        "gef_cancelamento_financeiro",
         "geduc_abertura_chamado",
     ],
     rag=RagBinding(

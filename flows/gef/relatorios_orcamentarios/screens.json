@@ -1,0 +1,17 @@
+{
+  "screens": {
+    "texto": {
+      "component": "form",
+      "name": "gef_relatorios_orcamentarios_texto",
+      "title": "Descreva a solicitação",
+      "fields": [
+        {
+          "key": "texto",
+          "title": "Detalhe",
+          "widget": "text",
+          "required": true
+        }
+      ]
+    }
+  }
+}

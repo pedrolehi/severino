@@ -1,0 +1,17 @@
+{
+  "screens": {
+    "texto": {
+      "component": "form",
+      "name": "gef_gestao_pagamentos_texto",
+      "title": "Descreva a solicitação",
+      "fields": [
+        {
+          "key": "texto",
+          "title": "Detalhe",
+          "widget": "text",
+          "required": true
+        }
+      ]
+    }
+  }
+}
