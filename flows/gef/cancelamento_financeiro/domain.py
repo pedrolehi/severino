@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 FLOW_NAME = "gef_cancelamento_financeiro"
@@ -76,7 +76,7 @@ def parse_date(value: str):
     raw = (value or "").strip()
     for fmt in _DATE_FORMATS:
         try:
-            return datetime.strptime(raw, fmt).date()
+            return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc).date()
         except ValueError:
             continue
     return None

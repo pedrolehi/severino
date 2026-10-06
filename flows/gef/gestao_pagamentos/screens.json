@@ -1,15 +1,68 @@
 {
   "screens": {
-    "texto": {
+    "texto_metodo": {
       "component": "form",
-      "name": "gef_gestao_pagamentos_texto",
-      "title": "Descreva a solicitação",
+      "name": "gef_gestao_pagamentos_texto_metodo",
+      "title": "Descreva detalhadamente a sua solicitação.",
+      "fields": [
+        {
+          "key": "texto",
+          "title": "Solicitação",
+          "widget": "text",
+          "required": true
+        }
+      ]
+    },
+    "documento": {
+      "component": "form",
+      "name": "gef_gestao_pagamentos_documento",
+      "title": "Agora digite o número do CPF ou CNPJ:",
+      "fields": [
+        {
+          "key": "documento",
+          "title": "CPF ou CNPJ",
+          "widget": "text",
+          "required": true
+        }
+      ]
+    },
+    "banco": {
+      "component": "form",
+      "name": "gef_gestao_pagamentos_banco",
+      "title": "Por último, informe os dados bancários.",
+      "fields": [
+        {
+          "key": "banco",
+          "title": "Dados bancários",
+          "widget": "text",
+          "required": true
+        }
+      ]
+    },
+    "texto_problema": {
+      "component": "form",
+      "name": "gef_gestao_pagamentos_texto_problema",
+      "title": "Por favor, detalhe um pouco sobre seu problema.",
       "fields": [
         {
           "key": "texto",
           "title": "Detalhe",
           "widget": "text",
           "required": true
+        }
+      ]
+    },
+    "arquivo": {
+      "component": "form",
+      "name": "gef_gestao_pagamentos_arquivo",
+      "title": "Anexe o arquivo desejado:",
+      "fields": [
+        {
+          "key": "anexo",
+          "title": "Arquivo",
+          "widget": "file",
+          "required": true,
+          "maxSizeMb": 10
         }
       ]
     }
