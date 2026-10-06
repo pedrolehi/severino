@@ -160,7 +160,7 @@ def centro_de_custo_node(state: MultiAgentState) -> dict:
                 flow_name=d.FLOW_NAME,
                 step=STEP_NEXT,
                 flow_data=flow_data,
-                texts=(fichas[0][0],),
+                texts=(d.format_ficha(fichas[0][0]),),
                 screens=(buttons_screen("O que deseja fazer agora?", d.NEXT),),
             )
         return pack(
@@ -187,7 +187,7 @@ def centro_de_custo_node(state: MultiAgentState) -> dict:
             flow_name=d.FLOW_NAME,
             step=STEP_NEXT,
             flow_data=flow_data,
-            texts=(picked[0],),
+            texts=(d.format_ficha(picked[0]),),
             screens=(buttons_screen("O que deseja fazer agora?", d.NEXT),),
         )
 
