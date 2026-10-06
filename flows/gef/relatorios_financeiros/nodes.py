@@ -236,9 +236,17 @@ def _confirm_data(flow_data: dict[str, Any]) -> dict:
     )
 
 
+def _queue_date(raw: str) -> str:
+    """Fila lê DDMMYYYY. Orchestrate só tira o hífen de dd-mm-yyyy."""
+    day = d.parse_date(raw)
+    if day is None:
+        return raw
+    return d.show_date(day)
+
+
 def _solicitar(info: dict[str, str], flow_data: dict[str, Any]) -> dict:
-    inicio = str(flow_data.get("data_inicio") or "")
-    fim = str(flow_data.get("data_fim") or inicio)
+    inicio = _queue_date(str(flow_data.get("data_inicio") or ""))
+    fim = _queue_date(str(flow_data.get("data_fim") or flow_data.get("data_inicio") or ""))
     result = create_orchestrate_client().post_json(
         "/gef/relatorios/solicitar",
         {
