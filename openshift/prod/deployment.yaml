@@ -40,7 +40,10 @@ spec:
             - name: REDIS_PORT
               value: "16994"
             - name: REDIS_PASSWORD
-              value: "IGLjUDEtoZnWjKH8Zwe14moDx5G27rob"
+              valueFrom:
+                secretKeyRef:
+                  name: prod-senac-from-scratch-multiagent-secret
+                  key: REDIS_PASSWORD
 
             # RAG / search-vectory (comunicacao interna prod via ClusterIP DNS)
             - name: SEARCH_VECTORY_URL
