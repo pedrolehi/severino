@@ -1,0 +1,111 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: hml-senac-from-scratch-multiagent
+  namespace: hml-senac-orquestrator-chatbotx
+  labels:
+    app: hml-senac-from-scratch-multiagent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hml-senac-from-scratch-multiagent
+  template:
+    metadata:
+      labels:
+        app: hml-senac-from-scratch-multiagent
+    spec:
+      containers:
+        - name: hml-senac-from-scratch-multiagent
+          image: us.icr.io/code-engine-senac-teste/senac-from-scratch-multiagent:latest
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          env:
+            - name: APP_ENV
+              value: "homolog"
+            - name: PORT
+              value: "8000"
+
+            # OpenAI (armazenado no Secret do OpenShift, sem expor no Git)
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hml-senac-from-scratch-multiagent-secret
+                  key: OPENAI_API_KEY
+
+            # Redis (checkpoint de sessoes / LangGraph)
+            - name: REDIS_HOST
+              value: "redis-16994.c282.east-us-mz.azure.cloud.redislabs.com"
+            - name: REDIS_PORT
+              value: "16994"
+            - name: REDIS_PASSWORD
+              value: "IGLjUDEtoZnWjKH8Zwe14moDx5G27rob"
+
+            # RAG / search-vectory (comunicacao interna via ClusterIP DNS)
+            - name: SEARCH_VECTORY_URL
+              value: "http://hml-senac-search-vectory-backend-service.hml-senac-orquestrator-chatbotx.svc.cluster.local:8081/api/v1"
+            - name: SEARCH_VECTORY_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hml-senac-search-vectory-internal
+                  key: INTERNAL_API_TOKEN
+                  optional: true
+
+            # MongoDB (projetos do RAG)
+            - name: MONGODB_URI
+              value: "mongodb://ibm_cloud_9ffbe8b6_5eb1_4954_8256_0c84ab674ebd:2e7964719a0255f91e0c31e38db092d1d606cf5f00dfc8095d0d8260a7f5c7ca@e60618f7-9b54-46d8-98ec-4916dbaffb51-0.br37s45d0p54n73ffbr0.databases.appdomain.cloud:31951,e60618f7-9b54-46d8-98ec-4916dbaffb51-1.br37s45d0p54n73ffbr0.databases.appdomain.cloud:31951,e60618f7-9b54-46d8-98ec-4916dbaffb51-2.br37s45d0p54n73ffbr0.databases.appdomain.cloud:31951/vectory?authSource=admin&replicaSet=replset&tls=true&tlsInsecure=true"
+            - name: MONGODB_DATABASE
+              value: "vectory"
+            - name: RAG_TOP_K
+              value: "5"
+            - name: RAG_ENABLE_RERANKING
+              value: "true"
+
+            # senac-orchestrate (flows GEF / nota fiscal via ClusterIP DNS)
+            - name: SENAC_ORCHESTRATE_URL
+              value: "http://hml-senac-orchestrate-service.hml-senac-orquestrator-chatbotx.svc.cluster.local:3333"
+            - name: ORCHESTRATE_USE_MOCK
+              value: "false"
+
+            # OpenJEV (router com fallback LLM)
+            - name: USE_JEV_ROUTER
+              value: "true"
+            - name: OPENJEV_BASE_URL
+              value: "http://10.1.0.110:8011"
+
+            # CORS / origens permitidas (widget e intranet)
+            - name: ALLOWED_ORIGINS
+              value: "http://homologacao.intranet.sp.senac.br,https://www.intranet.sp.senac.br,https://hassistentevirtual.sp.senac.br,https://assistentevirtual.sp.senac.br,https://hml-senac-orquestrator-chatbotx.ocp-senac-11f45abbd458185944dd806416f75c34-0000.us-south.containers.appdomain.cloud,https://prod-senac-orquestrator-chatbotx.ocp-senac-11f45abbd458185944dd806416f75c34-0000.us-south.containers.appdomain.cloud,https://gtae-edu.sp.senac.br"
+
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: container-registry
+      schedulerName: default-scheduler
+  strategy:
+    type: Recreate

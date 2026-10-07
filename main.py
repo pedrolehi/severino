@@ -1,4 +1,5 @@
 import json
+import os
 import queue
 import threading
 import time
@@ -29,12 +30,26 @@ def _warm_startup() -> None:
 _warm_startup()
 
 app = FastAPI(title="from-scratch-multiagent API")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
-)
+
+raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
+allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+
+if allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["*"],
+    )
 
 
 class ChatRequest(BaseModel):
@@ -109,6 +124,7 @@ def _prepare(request: ChatRequest) -> tuple[str, dict, dict]:
 
 
 @app.get("/")
+@app.get("/health")
 def read_root() -> dict[str, str]:
     return {"status": "ok", "service": "from-scratch-multiagent"}
 

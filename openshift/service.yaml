@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hml-senac-from-scratch-multiagent-service
+  namespace: hml-senac-orquestrator-chatbotx
+  labels:
+    app: hml-senac-from-scratch-multiagent
+spec:
+  ports:
+    - name: 8000-tcp
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: hml-senac-from-scratch-multiagent
