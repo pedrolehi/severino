@@ -28,8 +28,10 @@ jobs:
       - name: Login to IBM Cloud
         env:
           IBMCLOUD_VERSION_CHECK: false
+          RAW_KEY: ${{ secrets.IBM_CLOUD_API_KEY }}
         run: |
-          ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r us-south
+          API_KEY=$(echo -n "$RAW_KEY" | tr -d '\r\n ')
+          ibmcloud login -r us-south -g RG-Senac --apikey "$API_KEY"
           ibmcloud cr region-set us-south
           ibmcloud cr login
 
