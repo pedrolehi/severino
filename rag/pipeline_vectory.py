@@ -218,28 +218,48 @@ def run_rag_pipeline(
     try:
         if stream:
             body: dict[str, Any] | None = None
-            for event in iter_rag_answer(
-                query=query_clean,
-                collection_name=collection_name,
-                top_k=policy.search.top_k,
-                search_buffer=max(1, int(policy.search.search_buffer or 1)),
-                conversation=turns or None,
-                session_id=session_id,
-                agent_id=assistant_id,
-                persist_log=True,
-            ):
-                kind = event.get("event")
-                if kind == "token":
-                    text = str(event.get("text") or "")
-                    if text and on_token:
-                        on_token(text)
-                elif kind == "step":
-                    if on_step:
-                        on_step(event)
-                elif kind == "done":
-                    body = {k: v for k, v in event.items() if k != "event"}
-            if body is None:
-                raise VectoryHttpError(502, "stream terminou sem evento done")
+            try:
+                for event in iter_rag_answer(
+                    query=query_clean,
+                    collection_name=collection_name,
+                    top_k=policy.search.top_k,
+                    search_buffer=max(1, int(policy.search.search_buffer or 1)),
+                    conversation=turns or None,
+                    session_id=session_id,
+                    agent_id=assistant_id,
+                    persist_log=True,
+                ):
+                    kind = event.get("event")
+                    if kind == "token":
+                        text = str(event.get("text") or "")
+                        if text and on_token:
+                            on_token(text)
+                    elif kind == "step":
+                        if on_step:
+                            on_step(event)
+                    elif kind == "done":
+                        body = {k: v for k, v in event.items() if k != "event"}
+                if body is None:
+                    raise VectoryHttpError(502, "stream terminou sem evento done")
+            except VectoryHttpError as stream_exc:
+                print(
+                    f"[RAG pipeline] stream falhou ({stream_exc}); fallback para call_rag_answer síncrono",
+                    file=log,
+                    flush=True,
+                )
+                body = call_rag_answer(
+                    query=query_clean,
+                    collection_name=collection_name,
+                    top_k=policy.search.top_k,
+                    search_buffer=max(1, int(policy.search.search_buffer or 1)),
+                    conversation=turns or None,
+                    session_id=session_id,
+                    agent_id=assistant_id,
+                    persist_log=True,
+                )
+                fallback_ans = str((body or {}).get("answer") or "")
+                if fallback_ans and on_token:
+                    on_token(fallback_ans)
         else:
             body = call_rag_answer(
                 query=query_clean,
