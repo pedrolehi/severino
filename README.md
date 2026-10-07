@@ -174,6 +174,7 @@ from-scratch-multiagent/
 
 ## Docs internas
 
+- `DEPLOY_OPENSHIFT.md` — guia de deploy, CI/CD (GitHub Actions), OpenShift e secrets
 - `backlog/hub-multi-assistente.md` — arquitetura alvo e roadmap
 
 ---
