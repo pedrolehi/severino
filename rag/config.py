@@ -10,7 +10,10 @@ RAG_ENABLE_RERANKING = os.getenv("RAG_ENABLE_RERANKING", "true").strip().lower()
 VECTORY_ENV_BY_APP_ENV = {
     "dev": "dev",
     "hml": "homolog",
+    "homolog": "homolog",
+    "homologation": "homolog",
     "prod": "prod",
+    "production": "prod",
 }
 
 PROJECTS_COLLECTION = "projects"
