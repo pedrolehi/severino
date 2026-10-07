@@ -83,6 +83,11 @@ def iter_ndjson(
         ) as response:
             if not response.is_success:
                 detail = response.read().decode("utf-8", errors="replace").strip()
+                if response.status_code == 401 and not SEARCH_VECTORY_INTERNAL_TOKEN:
+                    detail = (
+                        f"{detail} — defina SEARCH_VECTORY_INTERNAL_TOKEN no .env "
+                        "(mesmo INTERNAL_API_TOKEN do search-vectory) ou use URL local."
+                    )
                 raise VectoryHttpError(response.status_code, detail or response.reason_phrase)
             for line in response.iter_lines():
                 text = (line or "").strip()

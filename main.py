@@ -1,8 +1,10 @@
 import json
 import os
 import queue
+import sys
 import threading
 import time
+import traceback
 import uuid
 from collections.abc import Iterator
 
@@ -178,6 +180,8 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                 },
             )
         except Exception as exc:  # noqa: BLE001
+            traceback.print_exc()
+            print(f"[CHAT STREAM ERROR] {exc}", file=sys.stderr, flush=True)
             holder["error"] = str(exc)
         finally:
             token_queue.put(None)

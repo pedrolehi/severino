@@ -241,7 +241,7 @@ def run_rag_pipeline(
                         body = {k: v for k, v in event.items() if k != "event"}
                 if body is None:
                     raise VectoryHttpError(502, "stream terminou sem evento done")
-            except VectoryHttpError as stream_exc:
+            except (VectoryHttpError, Exception) as stream_exc:
                 print(
                     f"[RAG pipeline] stream falhou ({stream_exc}); fallback para call_rag_answer síncrono",
                     file=log,
@@ -271,8 +271,9 @@ def run_rag_pipeline(
                 agent_id=assistant_id,
                 persist_log=True,
             )
-    except VectoryHttpError as exc:
-        print(f"[RAG pipeline] HTTP erro: {exc}")
+    except (VectoryHttpError, Exception) as exc:
+        err_msg = str(getattr(exc, "detail", str(exc)))
+        print(f"[RAG pipeline] Erro no RAG: {exc}")
         return {
             "query": query_clean,
             "app_env": env,
@@ -281,12 +282,12 @@ def run_rag_pipeline(
             "search_attempt": 0,
             "fallback_reason": "rag_pipeline:http_error",
             "fallback_source": "rag_pipeline",
-            "fallback_hint": str(exc.detail),
+            "fallback_hint": err_msg,
             "rag_result": {
                 "query": query_clean,
                 "collection_name": collection_name,
                 "pipeline": "rag_answer",
-                "error": str(exc.detail),
+                "error": err_msg,
             },
         }
 
