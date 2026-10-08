@@ -27,12 +27,17 @@ spec:
             - name: PORT
               value: "8000"
 
-            # OpenAI (armazenado no Secret do OpenShift, sem expor no Git)
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: hml-senac-from-scratch-multiagent-secret
-                  key: OPENAI_API_KEY
+            # Provedor IBM Watsonx (Granite)
+            - name: LLM_PROVIDER
+              value: "ibm"
+            - name: IBM_API_KEY
+              value: "jcy02VMrCQTb2RdFQxPbsBAGwdmlb-maxLe30O8Rvg1C"
+            - name: IBM_PROJECT_ID
+              value: "2e8f19f8-9018-41c4-9e08-b85f994f031f"
+            - name: IBM_BASE_URL
+              value: "https://us-south.ml.cloud.ibm.com"
+            - name: WATSONX_LLM_MODEL
+              value: "ibm/granite-4-h-small"
 
             # Redis (checkpoint de sessoes / LangGraph)
             - name: REDIS_HOST

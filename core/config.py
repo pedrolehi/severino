@@ -4,7 +4,37 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# LLM Provider configuration (ibm, internal, ou fallback)
+LLM_PROVIDER = (os.getenv("LLM_PROVIDER") or "ibm").strip().lower()
+
+# IBM Watsonx
+IBM_API_KEY = (
+    os.getenv("IBM_IAM_APIKEY") or os.getenv("IBM_API_KEY") or ""
+).strip() or None
+IBM_PROJECT_ID = (os.getenv("IBM_PROJECT_ID") or "").strip() or None
+IBM_BASE_URL = (
+    os.getenv("IBM_BASE_URL") or "https://us-south.ml.cloud.ibm.com"
+).strip().rstrip("/")
+WATSONX_LLM_MODEL = (
+    os.getenv("WATSONX_LLM_MODEL")
+    or os.getenv("IBM_MODEL_ID")
+    or "ibm/granite-4-h-small"
+).strip()
+IBM_API_VERSION = (os.getenv("IBM_API_VERSION") or "2024-07-23").strip()
+
+# Internal LLM / JEV port (endpoint compatível ou gateway interno)
+INTERNAL_LLM_BASE_URL = (
+    os.getenv("INTERNAL_LLM_BASE_URL") or os.getenv("OPENAI_BASE_URL") or ""
+).strip().rstrip("/")
+INTERNAL_LLM_MODEL = (
+    os.getenv("INTERNAL_LLM_MODEL") or os.getenv("OPENAI_MODEL_NAME") or "granite"
+).strip()
+INTERNAL_LLM_API_KEY = (
+    os.getenv("INTERNAL_LLM_API_KEY") or "internal"
+).strip()
+
+# Chave legada/opcional da OpenAI (não mais obrigatória)
+OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip() or None
 
 APP_ENV = (os.getenv("APP_ENV") or "dev").strip().lower()
 SEARCH_VECTORY_URL = (
@@ -45,6 +75,3 @@ USE_JEV_ROUTER = (os.getenv("USE_JEV_ROUTER") or "true").strip().lower() in {
 def is_redis_configured() -> bool:
     return bool(REDIS_HOST and REDIS_PORT and REDIS_PASSWORD)
 
-
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY não está configurado")
