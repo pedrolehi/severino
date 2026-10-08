@@ -138,6 +138,31 @@ def _body_to_state(
     if status == "needs_clarification" and not draft:
         draft = clarification or fallback_message
 
+    raw_citations = body.get("citations") if isinstance(body.get("citations"), list) else []
+    citations = raw_citations
+    if not citations and chunks:
+        seen_docs = set()
+        fallback_citations = []
+        for c in chunks:
+            meta = c.get("metadata") or {}
+            source = meta.get("document_source") or {}
+            cos_path = str(source.get("cos_path") or meta.get("filename") or "").strip()
+            title = str(meta.get("document_title") or meta.get("filename") or "").strip()
+            if cos_path and cos_path not in seen_docs:
+                seen_docs.add(cos_path)
+                fallback_citations.append({
+                    "sentence_index": 0,
+                    "sentence": draft[:120] if draft else "",
+                    "chunk_id": str(c.get("id") or ""),
+                    "filename": str(meta.get("filename") or ""),
+                    "document_title": title or str(meta.get("filename") or ""),
+                    "section_title": str(meta.get("section_title") or ""),
+                    "cos_path": cos_path,
+                    "download_cos_path": str(source.get("download_cos_path") or "").strip(),
+                })
+        if fallback_citations:
+            citations = fallback_citations
+
     rag_result: dict[str, Any] = {
         "query": query_clean,
         "collection_name": collection_name,
@@ -155,7 +180,7 @@ def _body_to_state(
         "timings_ms": body.get("timings_ms"),
         "plan": body.get("plan"),
         "trace": body.get("trace"),
-        "citations": body.get("citations") if isinstance(body.get("citations"), list) else [],
+        "citations": citations,
     }
     if draft:
         rag_result["draft_answer"] = draft
@@ -166,6 +191,7 @@ def _body_to_state(
         "app_env": env,
         "collection_name": collection_name,
         "chunks": chunks,
+        "citations": citations,
         "search_attempt": 0,
         "rag_result": rag_result,
         "fallback_reason": fallback_reason,
@@ -173,7 +199,12 @@ def _body_to_state(
         "fallback_hint": fallback_hint,
     }
     if draft:
-        result["messages"] = [AIMessage(content=draft)]
+        result["messages"] = [
+            AIMessage(
+                content=draft,
+                additional_kwargs={"citations": citations},
+            )
+        ]
         if status in {"answered", "needs_clarification"}:
             result["fallback_reason"] = None
             result["fallback_source"] = None

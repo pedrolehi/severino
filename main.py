@@ -92,6 +92,7 @@ class ChatResponse(BaseModel):
     response: str
     route: str | None = None
     ui: list[dict] | None = None
+    citations: list[dict] | None = None
 
 
 def _route_from_result(result: dict) -> str | None:
@@ -100,6 +101,25 @@ def _route_from_result(result: dict) -> str | None:
     if isinstance(route, dict):
         route = route.get("choice")
     return route if isinstance(route, str) else None
+
+
+def _extract_citations(result: dict) -> list[dict]:
+    cits = result.get("citations")
+    if isinstance(cits, list) and cits:
+        return cits
+    rag_result = result.get("rag_result")
+    if isinstance(rag_result, dict):
+        cits = rag_result.get("citations")
+        if isinstance(cits, list) and cits:
+            return cits
+    try:
+        last_ai = _last_ai_message(result)
+        cits = (last_ai.additional_kwargs or {}).get("citations")
+        if isinstance(cits, list) and cits:
+            return cits
+    except Exception:
+        pass
+    return []
 
 
 def _last_ai_message(result: dict) -> AIMessage:
@@ -178,6 +198,7 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
         response=_response_text(result),
         route=_route_from_result(result),
         ui=_response_ui(result),
+        citations=_extract_citations(result),
     )
 
 
@@ -244,15 +265,14 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                 + "\n\n"
             )
             return
-        rag_result = result.get("rag_result") or {}
-        citations = rag_result.get("citations") if isinstance(rag_result, dict) else []
+        citations = _extract_citations(result)
         done = {
             "event": "done",
             "assistant_id": request.assistant_id,
             "session_id": session_id,
             "response": response_text,
             "route": _route_from_result(result),
-            "citations": citations if isinstance(citations, list) else [],
+            "citations": citations,
             "ui": response_ui,
         }
         yield "data: " + json.dumps(done, ensure_ascii=False) + "\n\n"
