@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import queue
 import sys
@@ -24,6 +25,20 @@ from flows.session import normalize_user_info
 load_dotenv()
 
 
+class HealthCheckFilter(logging.Filter):
+    """Filtra logs de acesso 200 OK para /health e / para evitar spam de liveness/readiness probes do k8s."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        # Se for /health ou / retornando 200, silencia do console
+        return not (("GET /health" in msg or 'GET / HTTP' in msg) and "200" in msg)
+
+
+# Aplica o filtro no logger uvicorn.access
+_health_filter = HealthCheckFilter()
+logging.getLogger("uvicorn.access").addFilter(_health_filter)
+
+
 def _warm_startup() -> None:
     for assistant_id in list_assistant_ids():
         get_graph(assistant_id)
@@ -32,6 +47,15 @@ def _warm_startup() -> None:
 _warm_startup()
 
 app = FastAPI(title="from-scratch-multiagent API")
+
+
+@app.on_event("startup")
+def _silence_health_check_probes() -> None:
+    uvicorn_logger = logging.getLogger("uvicorn.access")
+    uvicorn_logger.addFilter(_health_filter)
+    for handler in uvicorn_logger.handlers:
+        handler.addFilter(_health_filter)
+
 
 raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
 allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
