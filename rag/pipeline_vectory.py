@@ -9,7 +9,7 @@ from typing import Any
 from langchain_core.messages import AIMessage
 
 from assistants.registry import get_assistant_by_id
-from core.config import APP_ENV, SEARCH_VECTORY_URL
+from core.config import APP_ENV, SEARCH_VECTORY_STREAM_ENABLED, SEARCH_VECTORY_URL
 from rag.adapters.rag_answer_vectory import (
     VectoryHttpError,
     call_rag_answer,
@@ -204,7 +204,8 @@ def run_rag_pipeline(
     )
     query_clean = query.strip()
     turns = list(conversation or [])
-    endpoint = "rag/answer/stream" if stream else "rag/answer"
+    should_stream = bool(stream and SEARCH_VECTORY_STREAM_ENABLED)
+    endpoint = "rag/answer/stream" if should_stream else "rag/answer"
     log = sys.stderr if stream else sys.stdout
 
     print(
@@ -216,7 +217,7 @@ def run_rag_pipeline(
     )
 
     try:
-        if stream:
+        if should_stream:
             body: dict[str, Any] | None = None
             try:
                 for event in iter_rag_answer(
@@ -271,6 +272,10 @@ def run_rag_pipeline(
                 agent_id=assistant_id,
                 persist_log=True,
             )
+            if stream and on_token:
+                direct_ans = str((body or {}).get("answer") or "")
+                if direct_ans:
+                    on_token(direct_ans)
     except (VectoryHttpError, Exception) as exc:
         err_msg = str(getattr(exc, "detail", str(exc)))
         print(f"[RAG pipeline] Erro no RAG: {exc}")

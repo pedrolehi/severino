@@ -14,6 +14,13 @@ SEARCH_VECTORY_URL = (
 SEARCH_VECTORY_INTERNAL_TOKEN = (
     os.getenv("SEARCH_VECTORY_INTERNAL_TOKEN") or os.getenv("INTERNAL_API_TOKEN") or ""
 ).strip() or None
+# Flag para controlar se tenta /rag/answer/stream antes do fallback síncrono.
+# Default False enquanto o pod do search-vectory não tiver /stream liberado nos internal_paths.
+SEARCH_VECTORY_STREAM_ENABLED = os.getenv("SEARCH_VECTORY_STREAM_ENABLED", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
 MONGODB_URI = (os.getenv("MONGODB_URI") or "").strip()
 MONGODB_DATABASE = (os.getenv("MONGODB_DATABASE") or "vectory").strip() or "vectory"
 

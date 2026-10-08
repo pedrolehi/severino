@@ -6,6 +6,20 @@ from rag.config import PROJECTS_COLLECTION, VECTORY_ENV_BY_APP_ENV
 VectoryEnvironment = Literal["dev", "homolog", "prod"]
 AppEnvironment = Literal["dev", "hml", "prod"]
 
+# Mapeamento para ambientes onde a collection Milvus tem nome específico.
+# Em homologação, o Search-Vectory / Milvus armazena os dados da Intranet na collection 'intranet_dev'
+# (mesmo mapeamento que o Watson Orchestrate utiliza com sucesso).
+COLLECTION_OVERRIDES_BY_ENV: dict[str, dict[str, str]] = {
+    "homolog": {
+        "intranet": "intranet_dev",
+        "intranet_homolog": "intranet_dev",
+    },
+    "hml": {
+        "intranet": "intranet_dev",
+        "intranet_homolog": "intranet_dev",
+    },
+}
+
 
 class ProjectStoreError(Exception):
     pass
@@ -35,6 +49,11 @@ def fetch_project_doc(project_id: str) -> dict:
 
 
 def resolve_collection_name(project_id: str, app_env: str) -> str:
+    env_clean = (app_env or "").strip().lower()
+    override = COLLECTION_OVERRIDES_BY_ENV.get(env_clean, {}).get(project_id)
+    if override:
+        return override
+
     project = fetch_project_doc(project_id)
     vectory_env = resolve_vectory_environment(app_env)
     collections = project.get("collections") or {}
@@ -44,7 +63,8 @@ def resolve_collection_name(project_id: str, app_env: str) -> str:
             f"Collection não configurada para projeto '{project_id}' "
             f"no ambiente '{vectory_env}' (app_env={app_env})"
         )
-    return str(collection_name)
+    resolved = str(collection_name)
+    return COLLECTION_OVERRIDES_BY_ENV.get(env_clean, {}).get(resolved, resolved)
 
 
 def resolve_assistant_collection(
@@ -53,8 +73,10 @@ def resolve_assistant_collection(
     app_env: str,
     collection_name: str | None = None,
 ) -> str:
-    """Override explícito ou lookup Mongo projects[env]."""
+    """Override explícito ou lookup Mongo projects[env], com alinhamento de homolog."""
     override = (collection_name or "").strip()
     if override:
-        return override
+        env_clean = (app_env or "").strip().lower()
+        return COLLECTION_OVERRIDES_BY_ENV.get(env_clean, {}).get(override, override)
     return resolve_collection_name(project_id, app_env)
+
