@@ -36,7 +36,9 @@ from core.config import (
     IBM_PROJECT_ID,
     INTERNAL_LLM_API_KEY,
     INTERNAL_LLM_BASE_URL,
+    INTERNAL_LLM_CONNECT_TIMEOUT_S,
     INTERNAL_LLM_MODEL,
+    INTERNAL_LLM_TIMEOUT_S,
     LLM_PROVIDER,
     WATSONX_LLM_MODEL,
 )
@@ -440,6 +442,13 @@ class InternalChatModel(BaseChatModel):
     api_key: str = Field(default_factory=lambda: INTERNAL_LLM_API_KEY)
     temperature: float = 0.7
     max_tokens: int = 1024
+    connect_timeout: float = Field(
+        default_factory=lambda: INTERNAL_LLM_CONNECT_TIMEOUT_S
+    )
+    timeout: float = Field(default_factory=lambda: INTERNAL_LLM_TIMEOUT_S)
+    fallback_model: Optional[BaseChatModel] = None
+
+    _down_until: float = 0.0
 
     @property
     def _llm_type(self) -> str:
@@ -468,6 +477,12 @@ class InternalChatModel(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> ChatResult:
+        if time.time() < InternalChatModel._down_until:
+            if self.fallback_model:
+                return self.fallback_model._generate(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
+
         url = f"{self.base_url.rstrip('/')}/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
@@ -480,7 +495,12 @@ class InternalChatModel(BaseChatModel):
             "max_tokens": self.max_tokens,
         }
         try:
-            res = requests.post(url, headers=headers, json=payload, timeout=40)
+            res = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=(self.connect_timeout, self.timeout),
+            )
             res.raise_for_status()
             data = res.json()
             content = data["choices"][0]["message"]["content"]
@@ -488,7 +508,16 @@ class InternalChatModel(BaseChatModel):
                 generations=[ChatGeneration(message=AIMessage(content=content))]
             )
         except Exception as exc:
-            logger.error("Erro ao chamar endpoint interno LLM: %s", exc)
+            InternalChatModel._down_until = time.time() + 30.0
+            logger.warning(
+                "Endpoint interno LLM (%s) indisponível (%s). Acionando fallback.",
+                self.base_url,
+                exc,
+            )
+            if self.fallback_model:
+                return self.fallback_model._generate(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
             return ChatResult(
                 generations=[
                     ChatGeneration(
@@ -497,6 +526,85 @@ class InternalChatModel(BaseChatModel):
                         )
                     )
                 ]
+            )
+
+    def _stream(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        if time.time() < InternalChatModel._down_until:
+            if self.fallback_model:
+                yield from self.fallback_model._stream(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
+                return
+
+        url = f"{self.base_url.rstrip('/')}/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        payload = {
+            "model": self.model_name,
+            "messages": _messages_to_watsonx_format(messages),
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "stream": True,
+        }
+        emitted = False
+        try:
+            res = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=(self.connect_timeout, self.timeout),
+                stream=True,
+            )
+            res.raise_for_status()
+            res.encoding = "utf-8"
+            for line in res.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                if line.startswith("data:"):
+                    data_str = line[5:].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        evt = json.loads(data_str)
+                        choices = evt.get("choices") or []
+                        if choices and isinstance(choices[0], dict):
+                            delta = choices[0].get("delta") or {}
+                            delta_text = delta.get("content") or ""
+                            if delta_text:
+                                emitted = True
+                                yield ChatGenerationChunk(
+                                    message=AIMessageChunk(content=delta_text)
+                                )
+                    except json.JSONDecodeError:
+                        continue
+            return
+        except Exception as exc:
+            InternalChatModel._down_until = time.time() + 30.0
+            if emitted:
+                logger.warning("Stream interno interrompido: %s", exc)
+                return
+            logger.warning(
+                "Endpoint interno streaming (%s) indisponível (%s). Acionando fallback.",
+                self.base_url,
+                exc,
+            )
+            if self.fallback_model:
+                yield from self.fallback_model._stream(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
+                return
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(
+                    content="Desculpe, ocorreu uma instabilidade na comunicação com o assistente."
+                )
             )
 
 
@@ -597,15 +705,27 @@ def get_llm() -> BaseChatModel:
             api_version=IBM_API_VERSION,
         )
 
-    # 3) Porta / Endpoint Interno JEV
-    if INTERNAL_LLM_BASE_URL:
+    # 3) Porta / Endpoint Interno JEV (com fallback para Watsonx se credenciais existirem)
+    if INTERNAL_LLM_BASE_URL or provider in {"internal", "openjev"}:
+        fallback_target: BaseChatModel | None = None
+        if IBM_API_KEY and IBM_PROJECT_ID:
+            fallback_target = WatsonxChatModel(
+                model_name=WATSONX_LLM_MODEL,
+                project_id=IBM_PROJECT_ID,
+                api_key=IBM_API_KEY,
+                base_url=IBM_BASE_URL,
+                api_version=IBM_API_VERSION,
+            )
         logger.info(
-            "Inicializando InternalChatModel para endpoint %s", INTERNAL_LLM_BASE_URL
+            "Inicializando InternalChatModel para endpoint %s (fallback IBM: %s)",
+            INTERNAL_LLM_BASE_URL,
+            "habilitado" if fallback_target else "desabilitado",
         )
         return InternalChatModel(
             base_url=INTERNAL_LLM_BASE_URL,
             model_name=INTERNAL_LLM_MODEL,
             api_key=INTERNAL_LLM_API_KEY,
+            fallback_model=fallback_target,
         )
 
     # 4) Fallback seguro

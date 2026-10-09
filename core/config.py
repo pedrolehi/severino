@@ -32,6 +32,10 @@ INTERNAL_LLM_MODEL = (
 INTERNAL_LLM_API_KEY = (
     os.getenv("INTERNAL_LLM_API_KEY") or "internal"
 ).strip()
+INTERNAL_LLM_TIMEOUT_S = float(os.getenv("INTERNAL_LLM_TIMEOUT_S") or "3.0")
+INTERNAL_LLM_CONNECT_TIMEOUT_S = float(
+    os.getenv("INTERNAL_LLM_CONNECT_TIMEOUT_S") or "1.2"
+)
 
 # Chave legada/opcional da OpenAI (não mais obrigatória)
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip() or None
@@ -64,7 +68,8 @@ OPENJEV_BASE_URL = (
 )
 OPENJEV_API_KEY = (os.getenv("OPENJEV_API_KEY") or "").strip() or None
 OPENJEV_MODEL = (os.getenv("OPENJEV_MODEL") or "jev-latest").strip() or "jev-latest"
-OPENJEV_TIMEOUT_S = float(os.getenv("OPENJEV_TIMEOUT_S") or "4")
+OPENJEV_TIMEOUT_S = float(os.getenv("OPENJEV_TIMEOUT_S") or "2.0")
+OPENJEV_CONNECT_TIMEOUT_S = float(os.getenv("OPENJEV_CONNECT_TIMEOUT_S") or "1.0")
 USE_JEV_ROUTER = (os.getenv("USE_JEV_ROUTER") or "true").strip().lower() in {
     "1",
     "true",
