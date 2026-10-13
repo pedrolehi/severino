@@ -73,7 +73,7 @@ def gef_relatorios_orcamentarios_node(state: MultiAgentState) -> dict:
         texto=texto,
         area="gef",
     )
-    result = create_orchestrate_client().post_json("/geral/abertura-chamado", body)
+    result = create_orchestrate_client().open_ticket(body)
     return pack(
         flow_name=d.FLOW_NAME,
         step=None,

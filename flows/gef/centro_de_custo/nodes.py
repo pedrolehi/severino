@@ -1,4 +1,4 @@
-"""Runner — centro de custo. Selects em cadeia a partir das listas GEF."""
+"""Runner — centro de custo. Menu inicial e selects em cadeia a partir das listas GEF."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from flows.payload import option_pairs
 from flows.gef.centro_de_custo import domain as d
 from graph.state import MultiAgentState
 
+STEP_MENU = "menu"
 STEP_ORIGEM = "origem"
 STEP_MODALIDADE = "modalidade"
 STEP_CURSO = "curso"
@@ -42,25 +43,51 @@ def centro_de_custo_node(state: MultiAgentState) -> dict:
     flow_data: dict[str, Any] = dict(state.get("flow_data") or {})
     user_text = last_user_text(state.get("messages") or [])
 
-    if step is None or step == STEP_ORIGEM and not flow_data.get("_shown"):
-        if step is None:
-            options, error = _choices("/gef/lista-origem")
-            if error or not options:
-                return pack(
-                    flow_name=d.FLOW_NAME,
-                    step=None,
-                    flow_data={},
-                    texts=(f"Não carreguei as origens. {error or 'lista vazia'}",),
-                    done=True,
-                )
-            flow_data["origem_options"] = options
-            flow_data["_shown"] = True
+    if step is None:
+        return pack(
+            flow_name=d.FLOW_NAME,
+            step=STEP_MENU,
+            flow_data={},
+            screens=(buttons_screen("Escolha uma das opções:", d.MENU_INICIAL),),
+        )
+
+    if step == STEP_MENU:
+        choice = match_choice(user_text, d.MENU_INICIAL)
+        if not choice:
+            return reject(
+                flow_name=d.FLOW_NAME,
+                resume_step=STEP_MENU,
+                prompt="Escolha uma das opções:",
+                flow_data=flow_data,
+                service_label=d.SERVICE_LABEL,
+                resume_ui=[buttons_screen("Escolha uma das opções:", d.MENU_INICIAL)],
+            )
+        if choice == "solicitar":
             return pack(
                 flow_name=d.FLOW_NAME,
-                step=STEP_ORIGEM,
+                step=None,
                 flow_data=flow_data,
-                screens=(_select(STEP_ORIGEM, "Centro de custo", "Origem", options),),
+                texts=(d.MSG_SOLICITAR_ABERTURA,),
+                done=True,
             )
+
+        # Escolheu "consultar": inicia a cadeia pela lista de origens
+        options, error = _choices("/gef/lista-origem")
+        if error or not options:
+            return pack(
+                flow_name=d.FLOW_NAME,
+                step=None,
+                flow_data={},
+                texts=(f"Não carreguei as origens. {error or 'lista vazia'}",),
+                done=True,
+            )
+        flow_data["origem_options"] = options
+        return pack(
+            flow_name=d.FLOW_NAME,
+            step=STEP_ORIGEM,
+            flow_data=flow_data,
+            screens=(_select(STEP_ORIGEM, "Centro de custo", "Origem", options),),
+        )
 
     if step == STEP_ORIGEM:
         options = [tuple(item) for item in flow_data.get("origem_options") or []]

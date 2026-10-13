@@ -1,15 +1,7 @@
-from flows.flow_contract import define_flow
-from flows.gep.abertura_chamado.nodes import gep_abertura_chamado_node
-
-
-def build_gep_abertura_chamado_flow():
-    return gep_abertura_chamado_node
-
-
-FLOW = define_flow(
-    name="gep_abertura_chamado",
-    description=(
-        "Abrir chamado na GEP: crachás, ponto eletrônico, benefícios ou carta convite."
-    ),
-    builder=build_gep_abertura_chamado_flow,
-)
+# Este módulo foi descartado em favor dos fluxos de domínio específicos:
+# - flows/gep/abertura_chamado_beneficios
+# - flows/gep/abertura_chamado_carta_convite
+# - flows/gep/abertura_chamado_ponto_eletronico
+# - flows/gep/abertura_chamado_crachas
+#
+# Para reativá-lo, exporte a variável FLOW com define_flow.

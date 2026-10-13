@@ -1,0 +1,596 @@
+{
+  "timestamp": "2026-10-13T11:13:10.882571",
+  "total_scenarios": 13,
+  "passed": 2,
+  "failed": 11,
+  "total_duration_ms": 71462.71420000176,
+  "results": [
+    {
+      "scenario_id": "gep_saldo_de_horas",
+      "scenario_name": "GEP - Consulta de Saldo de Horas",
+      "flow_name": "saldo_de_horas",
+      "passed": true,
+      "duration_ms": 5666.788300000007,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Qual é o meu saldo de horas?",
+          "passed": true,
+          "errors": [],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gep_abertura_chamado_crachas",
+      "scenario_name": "GEP - Abertura de Chamado de Crachás",
+      "flow_name": "gep_abertura_chamado_crachas",
+      "passed": false,
+      "duration_ms": 10758.134700000483,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Preciso solicitar uma segunda via de crachá",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_crachas",
+          "flow_step": "detalhe"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Meu crachá quebrou na catraca e preciso de uma nova via.",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_crachas",
+          "flow_step": "ask_anexo"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Request failed with status code 500..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gep_abertura_chamado_ponto_eletronico",
+      "scenario_name": "GEP - Abertura de Chamado de Ponto Eletrônico",
+      "flow_name": "gep_abertura_chamado_ponto_eletronico",
+      "passed": false,
+      "duration_ms": 3773.367899999357,
+      "tickets": [
+        {
+          "ticket_id": "relacionado",
+          "flow_name": "gep_abertura_chamado_ponto_eletronico",
+          "subject": "GEP - Abertura de Chamado de Ponto Eletrônico",
+          "user_name": "Usuário Teste QA",
+          "chapa": "99999",
+          "created_at": "13/10/2026 11:12:17"
+        }
+      ],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Estou com erro no ponto eletrônico",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_ponto_eletronico",
+          "flow_step": "detalhe"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "O aplicativo Ponto WEB não gravou as batidas de ontem.",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_ponto_eletronico",
+          "flow_step": "ask_anexo"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Request failed with status code 500..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gep_abertura_chamado_beneficios",
+      "scenario_name": "GEP - Abertura de Chamado de Benefícios",
+      "flow_name": "gep_abertura_chamado_beneficios",
+      "passed": false,
+      "duration_ms": 5913.940600000387,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Gostaria de abrir um chamado sobre benefícios",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_beneficios",
+          "flow_step": "tema"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Cooperativa",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_beneficios",
+          "flow_step": "subtema"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Consignado",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_beneficios",
+          "flow_step": "detalhe"
+        },
+        {
+          "turn_index": 4,
+          "input_text": "Gostaria de solicitar informações para empréstimo consignado.",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_beneficios",
+          "flow_step": "ask_anexo"
+        },
+        {
+          "turn_index": 5,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Request failed with status code 500..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gep_abertura_chamado_carta_convite",
+      "scenario_name": "GEP - Abertura de Chamado de Carta Convite",
+      "flow_name": "gep_abertura_chamado_carta_convite",
+      "passed": false,
+      "duration_ms": 4814.467799999875,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Preciso abrir chamado sobre carta convite",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_carta_convite",
+          "flow_step": "tema"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Dúvidas gerais",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_carta_convite",
+          "flow_step": "subtema"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Funcionários CLT",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_carta_convite",
+          "flow_step": "detalhe"
+        },
+        {
+          "turn_index": 4,
+          "input_text": "Dúvida referente ao processo de emissão para docente CLT.",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gep_abertura_chamado_carta_convite",
+          "flow_step": "ask_anexo"
+        },
+        {
+          "turn_index": 5,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Request failed with status code 500..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gef_centro_de_custo_consulta",
+      "scenario_name": "GEF - Centro de Custo (Consulta)",
+      "flow_name": "centro_de_custo",
+      "passed": false,
+      "duration_ms": 8741.900999999416,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Quero consultar centro de custo",
+          "passed": true,
+          "errors": [],
+          "active_flow": "centro_de_custo",
+          "flow_step": "menu"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Consultar Centro de Custo",
+          "passed": true,
+          "errors": [],
+          "active_flow": "centro_de_custo",
+          "flow_step": "origem"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Presencial",
+          "passed": false,
+          "errors": [
+            "Esperava active_flow='centro_de_custo', mas recebeu 'None'",
+            "Esperava flow_step='modalidade', mas recebeu 'None'"
+          ],
+          "active_flow": null,
+          "flow_step": null
+        },
+        {
+          "turn_index": 4,
+          "input_text": "Curso técnico",
+          "passed": false,
+          "errors": [
+            "Esperava active_flow='centro_de_custo', mas recebeu 'None'",
+            "Esperava flow_step='curso', mas recebeu 'None'",
+            "Esperava blocos de interface (UI/screens), mas nenhum foi retornado"
+          ],
+          "active_flow": null,
+          "flow_step": null
+        },
+        {
+          "turn_index": 5,
+          "input_text": "Administração",
+          "passed": false,
+          "errors": [
+            "Esperava flow_step='next', mas recebeu 'menu'"
+          ],
+          "active_flow": "centro_de_custo",
+          "flow_step": "menu"
+        },
+        {
+          "turn_index": 6,
+          "input_text": "Encerrar",
+          "passed": false,
+          "errors": [
+            "Esperava fluxo concluído, mas active_flow='centro_de_custo', flow_step='__confirm_exit__'",
+            "Texto não contém 'Consulta encerrada'. Resposta recebida: Não entendi sua resposta.\n\nDeseja realmente sair de o serviço de centro de custo?..."
+          ],
+          "active_flow": "centro_de_custo",
+          "flow_step": "__confirm_exit__"
+        }
+      ]
+    },
+    {
+      "scenario_id": "gef_centro_de_custo_solicitar",
+      "scenario_name": "GEF - Centro de Custo (Solicitar Abertura)",
+      "flow_name": "centro_de_custo",
+      "passed": false,
+      "duration_ms": 10000.078900000517,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Preciso abrir centro de custo",
+          "passed": false,
+          "errors": [
+            "Esperava active_flow='centro_de_custo', mas recebeu 'None'",
+            "Esperava flow_step='menu', mas recebeu 'None'",
+            "Esperava blocos de interface (UI/screens), mas nenhum foi retornado"
+          ],
+          "active_flow": null,
+          "flow_step": null
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Solicitar Abertura de Centro de Custo",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'Serviços Financeiros'. Resposta recebida: Infelizmente, não encontrei informações na documentação sobre como solicitar a abertura de um centro...",
+            "Texto não contém 'cloud.sp.senac.br'. Resposta recebida: Infelizmente, não encontrei informações na documentação sobre como solicitar a abertura de um centro..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gef_segunda_via_nota_fiscal",
+      "scenario_name": "GEF - Segunda Via de Nota Fiscal",
+      "flow_name": "segunda_via_nota_fiscal",
+      "passed": false,
+      "duration_ms": 2029.9887000001036,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Quero a segunda via da nota fiscal",
+          "passed": true,
+          "errors": [],
+          "active_flow": "segunda_via_nota_fiscal",
+          "flow_step": "ask_sp"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Sim",
+          "passed": true,
+          "errors": [],
+          "active_flow": "segunda_via_nota_fiscal",
+          "flow_step": "collect_data"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "{\"cnpj_prestador\": \"03.235.083/0001-49\", \"cnpj_tomador\": \"04.235.083/0001-50\"}",
+          "passed": false,
+          "errors": [
+            "Esperava flow_step='collect_mes_ano', mas recebeu '__confirm_exit__'"
+          ],
+          "active_flow": "segunda_via_nota_fiscal",
+          "flow_step": "__confirm_exit__"
+        },
+        {
+          "turn_index": 4,
+          "input_text": "{\"mes\": \"05\", \"ano\": \"2026\"}",
+          "passed": false,
+          "errors": [
+            "Esperava fluxo concluído, mas active_flow='segunda_via_nota_fiscal', flow_step='__confirm_exit__'",
+            "Texto não contém 'notaprint'. Resposta recebida: Não entendi sua resposta.\n\nDeseja realmente sair de o serviço de segunda via de nota fiscal?...",
+            "Texto não contém 'http'. Resposta recebida: Não entendi sua resposta.\n\nDeseja realmente sair de o serviço de segunda via de nota fiscal?..."
+          ],
+          "active_flow": "segunda_via_nota_fiscal",
+          "flow_step": "__confirm_exit__"
+        }
+      ]
+    },
+    {
+      "scenario_id": "gef_relatorios_orcamentarios",
+      "scenario_name": "GEF - Relatórios Orçamentários",
+      "flow_name": "gef_relatorios_orcamentarios",
+      "passed": false,
+      "duration_ms": 3024.5992999998634,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Solicitar relatório orçamentário",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gef_relatorios_orcamentarios",
+          "flow_step": "texto"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Relatório de acompanhamento orçamentário de despesas de custeio.",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Not Found..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gef_gestao_pagamentos",
+      "scenario_name": "GEF - Gestão de Pagamentos",
+      "flow_name": "gef_gestao_pagamentos",
+      "passed": false,
+      "duration_ms": 2450.6406000000425,
+      "tickets": [
+        {
+          "ticket_id": "de",
+          "flow_name": "gef_gestao_pagamentos",
+          "subject": "GEF - Gestão de Pagamentos",
+          "user_name": "Usuário Teste QA",
+          "chapa": "99999",
+          "created_at": "13/10/2026 11:12:56"
+        },
+        {
+          "ticket_id": "de",
+          "flow_name": "gef_gestao_pagamentos",
+          "subject": "GEF - Gestão de Pagamentos",
+          "user_name": "Usuário Teste QA",
+          "chapa": "99999",
+          "created_at": "13/10/2026 11:12:56"
+        },
+        {
+          "ticket_id": "de",
+          "flow_name": "gef_gestao_pagamentos",
+          "subject": "GEF - Gestão de Pagamentos",
+          "user_name": "Usuário Teste QA",
+          "chapa": "99999",
+          "created_at": "13/10/2026 11:12:56"
+        },
+        {
+          "ticket_id": "de",
+          "flow_name": "gef_gestao_pagamentos",
+          "subject": "GEF - Gestão de Pagamentos",
+          "user_name": "Usuário Teste QA",
+          "chapa": "99999",
+          "created_at": "13/10/2026 11:12:56"
+        }
+      ],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Problema no meu pagamento",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gef_gestao_pagamentos",
+          "flow_step": "tipo"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Problemas no pagamento",
+          "passed": false,
+          "errors": [
+            "Esperava flow_step='texto', mas recebeu '__confirm_exit__'"
+          ],
+          "active_flow": "gef_gestao_pagamentos",
+          "flow_step": "__confirm_exit__"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Divergência de valores de horas extras no holerite.",
+          "passed": false,
+          "errors": [
+            "Esperava flow_step='anexo', mas recebeu '__confirm_exit__'"
+          ],
+          "active_flow": "gef_gestao_pagamentos",
+          "flow_step": "__confirm_exit__"
+        },
+        {
+          "turn_index": 4,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Esperava fluxo concluído, mas active_flow='gef_gestao_pagamentos', flow_step='tipo'",
+            "Texto não contém 'protocolo'. Resposta recebida: Ok, vamos continuar.\n\nSelecione o tipo de chamado de pagamento:..."
+          ],
+          "active_flow": "gef_gestao_pagamentos",
+          "flow_step": "tipo"
+        }
+      ]
+    },
+    {
+      "scenario_id": "gcr_abertura_chamado",
+      "scenario_name": "GCR - Abertura de Chamado",
+      "flow_name": "gcr_abertura_chamado",
+      "passed": false,
+      "duration_ms": 6157.39350000058,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Preciso abrir chamado no GCR",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gcr_abertura_chamado",
+          "flow_step": "detalhe"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Dúvida de cliente presencial referente a pendência cadastral na unidade.",
+          "passed": true,
+          "errors": [],
+          "active_flow": "gcr_abertura_chamado",
+          "flow_step": "ask_anexo"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Request failed with status code 500..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "geduc_abertura_chamado",
+      "scenario_name": "GEDUC - Abertura de Chamado (Portarias)",
+      "flow_name": "geduc_abertura_chamado",
+      "passed": false,
+      "duration_ms": 2867.712800000845,
+      "tickets": [
+        {
+          "ticket_id": "GEDUC",
+          "flow_name": "geduc_abertura_chamado",
+          "subject": "GEDUC - Abertura de Chamado (Portarias)",
+          "user_name": "Usuário Teste QA",
+          "chapa": "99999",
+          "created_at": "13/10/2026 11:13:04"
+        }
+      ],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Solicitação de portarias",
+          "passed": true,
+          "errors": [],
+          "active_flow": "geduc_abertura_chamado",
+          "flow_step": "subtema"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "Designação de diretor e secretário escolar",
+          "passed": true,
+          "errors": [],
+          "active_flow": "geduc_abertura_chamado",
+          "flow_step": "detalhe"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Solicitação de portaria para novo diretor da unidade escolar Lapa Tito.",
+          "passed": true,
+          "errors": [],
+          "active_flow": "geduc_abertura_chamado",
+          "flow_step": "ask_anexo"
+        },
+        {
+          "turn_index": 4,
+          "input_text": "Não",
+          "passed": false,
+          "errors": [
+            "Texto não contém 'protocolo'. Resposta recebida: Não abri o chamado. Not Found..."
+          ],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    },
+    {
+      "scenario_id": "gpg_consulta_documentos",
+      "scenario_name": "GPG - Consulta de Documentos",
+      "flow_name": "consulta_documentos",
+      "passed": true,
+      "duration_ms": 5263.700100000278,
+      "tickets": [],
+      "turns": [
+        {
+          "turn_index": 1,
+          "input_text": "Quero consultar meus documentos",
+          "passed": true,
+          "errors": [],
+          "active_flow": "consulta_documentos",
+          "flow_step": "keyword"
+        },
+        {
+          "turn_index": 2,
+          "input_text": "comprovante",
+          "passed": true,
+          "errors": [],
+          "active_flow": "consulta_documentos",
+          "flow_step": "next"
+        },
+        {
+          "turn_index": 3,
+          "input_text": "Encerrar",
+          "passed": true,
+          "errors": [],
+          "active_flow": null,
+          "flow_step": null
+        }
+      ]
+    }
+  ]
+}

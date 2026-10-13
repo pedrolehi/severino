@@ -62,7 +62,7 @@ def _abrir(info: dict[str, str], flow_data: dict[str, Any], anexo: str) -> str:
     body["ticketSpecs"] = specs
     if anexo:
         body["anexo"] = {"file_url": anexo}
-    result = create_orchestrate_client().post_json("/tools/abertura-chamado", body)
+    result = create_orchestrate_client().open_ticket(body)
     return _resultado(result)
 
 

@@ -76,20 +76,36 @@ def anexo_texto(data: dict[str, Any], key: str = "anexo") -> str:
     return ""
 
 
-def pessoa_body(info: dict[str, str], *, tipo: str, classification: str, texto: str, tema: str, subtema: str = "") -> dict[str, str]:
+def pessoa_body(info: dict[str, str], *, tipo: str, classification: str, texto: str, tema: str, subtema: str = "") -> dict[str, Any]:
+    nome = info.get("nome") or ""
+    email = info.get("email") or ""
+    unidade = info.get("unidade") or ""
+    long_desc = f"Nome: {nome}\nEmail: {email}\nUnidade: {unidade}\nTema: {tema}"
+    if subtema:
+        long_desc += f" | Subtema: {subtema}"
+    long_desc += f"\nDescrição: {texto}"
     return {
-        "nome": info.get("nome") or "",
-        "email": info.get("email") or "",
+        "area": "gep",
+        "nome": nome,
+        "email": email,
         "cpf": info.get("cpf") or "",
-        "unidade": info.get("unidade") or "",
+        "unidade": unidade,
         "tipo_chamado": tipo,
         "classificationId": classification,
+        "CLASSIFICATIONID": classification,
         "classStructureId": "",
         "commodity": "",
         "commodityGroup": "",
         "texto": texto,
         "tema": tema,
         "subtema": subtema,
+        "REPORTEDBY": nome,
+        "AFFECTEDPERSON": nome,
+        "REPORTEDEMAIL": email,
+        "AFFECTEDEMAIL": email,
+        "LOCATION": unidade,
+        "DESCRIPTION": f"Gestão de Pessoas - {tipo}",
+        "DESCRIPTION_LONGDESCRIPTION": long_desc,
         "dataNascimento": info.get("data_nascimento") or "",
         "pisPasepNit": info.get("pis") or "",
         "anexo": "",

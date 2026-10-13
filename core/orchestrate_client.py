@@ -1,9 +1,7 @@
-"""Cliente HTTP fino para o senac-orchestrate."""
-
-from __future__ import annotations
-
+import json
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,6 +10,130 @@ import httpx
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 30.0
+
+
+def _format_payload_for_log(data: Any, max_length: int = 1200) -> str:
+    if data is None:
+        return "null"
+    if isinstance(data, (dict, list)):
+        try:
+            dumped = json.dumps(data, ensure_ascii=False, indent=2)
+            if len(dumped) > max_length:
+                return dumped[:max_length] + f"... (truncado, total {len(dumped)} caracteres)"
+            return dumped
+        except Exception:
+            pass
+    text = str(data)
+    if len(text) > max_length:
+        return text[:max_length] + f"... (truncado, total {len(text)} caracteres)"
+    return text
+
+
+def _extract_error_detail(
+    status_code: int,
+    payload: Any,
+    raw_text: str = "",
+) -> tuple[int, str]:
+    """Extrai código de status real e mensagem de erro estruturada com dados de upstream."""
+    effective_status = status_code
+    parts: list[str] = []
+
+    if isinstance(payload, dict):
+        # 1. Tenta identificar status code interno da API ou gateway
+        for key in ("status", "statusCode", "CODIGO", "status_code"):
+            val = payload.get(key)
+            if val is not None and str(val).isdigit():
+                parsed_val = int(val)
+                if parsed_val >= 400:
+                    effective_status = parsed_val
+                    break
+
+        # 2. Coleta mensagem primária de erro
+        primary_msg = None
+        for key in ("error", "message", "MENSAGEM", "mensagem", "detail", "details", "WSRETURNDETAIL"):
+            val = payload.get(key)
+            if val and isinstance(val, (str, int, float)):
+                clean_val = str(val).strip()
+                if clean_val and clean_val.lower() not in {"internal server error", "error"}:
+                    primary_msg = clean_val
+                    break
+        if not primary_msg and payload.get("error"):
+            primary_msg = str(payload["error"]).strip()
+        elif not primary_msg and payload.get("message"):
+            primary_msg = str(payload["message"]).strip()
+
+        if primary_msg:
+            parts.append(primary_msg)
+
+        # 3. Coleta campos 'data' / 'DADOS' / 'details' onde residem respostas das APIs externas do Senac/Maximo
+        for extra_key in ("data", "DADOS", "details", "raw"):
+            extra = payload.get(extra_key)
+            if not extra:
+                continue
+            if isinstance(extra, dict):
+                sub_msg = (
+                    extra.get("MENSAGEM")
+                    or extra.get("mensagem")
+                    or extra.get("error")
+                    or extra.get("message")
+                    or extra.get("WSRETURNDETAIL")
+                )
+                sub_code = extra.get("CODIGO") or extra.get("codigo") or extra.get("WSSTATUSCODE")
+                if sub_msg or sub_code:
+                    parts.append(f"[upstream {extra_key}: code={sub_code} msg='{sub_msg}']")
+                try:
+                    parts.append(f"{extra_key}={json.dumps(extra, ensure_ascii=False)}")
+                except Exception:
+                    parts.append(f"{extra_key}={str(extra)}")
+            elif isinstance(extra, str) and extra.strip() and extra.strip() != primary_msg:
+                parts.append(f"{extra_key}={extra.strip()}")
+            elif isinstance(extra, list) and extra:
+                try:
+                    parts.append(f"{extra_key}={json.dumps(extra, ensure_ascii=False)}")
+                except Exception:
+                    parts.append(f"{extra_key}={str(extra)}")
+
+        if payload.get("url"):
+            parts.append(f"upstream_url={payload.get('url')}")
+    elif raw_text:
+        cleaned_raw = raw_text.strip()
+        if cleaned_raw:
+            parts.append(cleaned_raw[:600])
+
+    if not parts:
+        parts.append(f"Erro HTTP {effective_status}")
+
+    full_detail = f"[HTTP {effective_status}] " + " | ".join(parts)
+    return effective_status, full_detail
+
+
+def _log_http_error_diagnostic(
+    method: str,
+    url: str,
+    status_code: int,
+    error_detail: str,
+    body: Any = None,
+    params: Any = None,
+    payload: Any = None,
+) -> None:
+    logger.error(
+        "orchestrate error: %s %s status=%s detail=%s",
+        method,
+        url,
+        status_code,
+        error_detail,
+    )
+    border = "=" * 78
+    print(
+        f"\n{border}\n"
+        f"🚨 [ORCHESTRATE HTTP ERROR] {method} {url}\n"
+        f"   HTTP Status:     {status_code}\n"
+        f"   Detalhe do Erro: {error_detail}\n"
+        f"   Payload Enviado: {_format_payload_for_log(body or params, max_length=600)}\n"
+        f"   Resposta API:    {_format_payload_for_log(payload, max_length=1500)}\n"
+        f"{border}\n",
+        flush=True,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,16 +246,40 @@ class OrchestrateClient:
             )
 
         if response.status_code != 200:
-            detail = response.text[:200] if response.text else response.reason_phrase
+            eff_status, error_detail = _extract_error_detail(
+                response.status_code,
+                None,
+                response.text,
+            )
+            _log_http_error_diagnostic(
+                "GET",
+                url,
+                eff_status,
+                error_detail,
+                params=params,
+                payload=response.text,
+            )
             return NotaFiscalResult(
                 ok=False,
-                status_code=response.status_code,
-                error_detail=detail or f"erro HTTP {response.status_code}",
+                status_code=eff_status,
+                error_detail=error_detail,
             )
 
-        payload = response.json()
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {"raw": response.text}
+
         status_http, links, error = _extract_links(payload)
         if error:
+            _log_http_error_diagnostic(
+                "GET",
+                url,
+                status_http or 500,
+                error,
+                params=params,
+                payload=payload,
+            )
             return NotaFiscalResult(
                 ok=False,
                 status_code=status_http or 500,
@@ -156,44 +302,83 @@ class OrchestrateClient:
         body: dict[str, Any] | None = None,
     ) -> CallResult:
         url = f"{self._base_url}{path}"
-        logger.info("orchestrate.%s %s", method, url)
+        timeout = httpx.Timeout(self._timeout, connect=5.0)
         try:
             response = httpx.request(
                 method,
                 url,
                 params=params,
                 json=body,
-                timeout=self._timeout,
+                timeout=timeout,
             )
         except httpx.HTTPError as exc:
             logger.error("orchestrate transport_error: %s", exc)
+            _log_http_error_diagnostic(
+                method,
+                url,
+                503,
+                f"Falha de transporte / conexão: {exc}",
+                body=body,
+                params=params,
+            )
             return _unavailable()
 
         try:
             payload = response.json()
         except ValueError:
-            payload = {"raw": (response.text or "")[:400]}
+            payload = {"raw": (response.text or "")[:1000]}
 
         if response.status_code >= 400:
-            detail = payload.get("error") if isinstance(payload, dict) else None
+            eff_status, error_detail = _extract_error_detail(
+                response.status_code,
+                payload,
+                response.text,
+            )
+            _log_http_error_diagnostic(
+                method,
+                url,
+                eff_status,
+                error_detail,
+                body=body,
+                params=params,
+                payload=payload,
+            )
             return CallResult(
                 ok=False,
                 payload=payload,
-                status_code=response.status_code,
-                error_detail=str(
-                    detail or (response.text or "")[:200] or response.reason_phrase
-                ),
+                status_code=eff_status,
+                error_detail=error_detail,
             )
 
         if isinstance(payload, dict):
             status = payload.get("status")
             error = payload.get("error")
-            if error and status not in (None, 200, "200"):
+            codigo = payload.get("CODIGO")
+            has_error = bool(error) or (
+                status not in (None, 200, "200") and str(status).isdigit() and int(status) >= 400
+            ) or (
+                codigo not in (None, 200, "200") and str(codigo).isdigit() and int(codigo) >= 400
+            )
+            if has_error:
+                eff_status, error_detail = _extract_error_detail(
+                    response.status_code,
+                    payload,
+                    response.text,
+                )
+                _log_http_error_diagnostic(
+                    method,
+                    url,
+                    eff_status,
+                    error_detail,
+                    body=body,
+                    params=params,
+                    payload=payload,
+                )
                 return CallResult(
                     ok=False,
                     payload=payload,
-                    status_code=int(status) if str(status).isdigit() else response.status_code,
-                    error_detail=str(error),
+                    status_code=eff_status,
+                    error_detail=error_detail,
                 )
         return CallResult(
             ok=True,
@@ -217,6 +402,56 @@ class OrchestrateClient:
 
     def post_json(self, path: str, body: dict[str, Any]) -> CallResult:
         return self._call("POST", path, body=body)
+
+    def classify_icd(self, classification_id: str) -> dict[str, str]:
+        res = self._call(
+            "POST",
+            "/tools/classify-icd",
+            body={"context": {"classificationId": classification_id}},
+        )
+        if not res.ok or not isinstance(res.payload, dict):
+            print(
+                f"⚠️ [CLASSIFY-ICD] Falha ao consultar metadados para '{classification_id}'. "
+                f"Status: {res.status_code} | Detalhes: {res.error_detail}",
+                flush=True,
+            )
+            return {}
+        data = res.payload.get("data")
+        dados = data.get("DADOS") if isinstance(data, dict) else res.payload.get("DADOS")
+        if isinstance(dados, dict):
+            meta = {
+                "COMMODITY": str(dados.get("COMMODITY") or ""),
+                "COMMODITYGROUP": str(dados.get("COMMODITYGROUP") or ""),
+                "CLASSIFICATIONID": str(dados.get("CLASSIFICATIONID") or classification_id),
+                "CLASSSTRUCTUREID": str(dados.get("CLASSSTRUCTUREID") or ""),
+            }
+            logger.info("classify_icd resolvido para %s: %s", classification_id, meta)
+            return meta
+        print(
+            f"⚠️ [CLASSIFY-ICD] Resposta não continha 'DADOS' para '{classification_id}': {res.payload}",
+            flush=True,
+        )
+        return {}
+
+    def open_ticket(self, body: dict[str, Any]) -> CallResult:
+        payload = dict(body)
+        classification_id = payload.get("classificationId") or payload.get("CLASSIFICATIONID")
+        if classification_id and not payload.get("CLASSSTRUCTUREID"):
+            icd_meta = self.classify_icd(str(classification_id))
+            if icd_meta:
+                if icd_meta.get("COMMODITY") and not payload.get("COMMODITY"):
+                    payload["COMMODITY"] = icd_meta["COMMODITY"]
+                if icd_meta.get("COMMODITYGROUP") and not payload.get("COMMODITYGROUP"):
+                    payload["COMMODITYGROUP"] = icd_meta["COMMODITYGROUP"]
+                if icd_meta.get("CLASSSTRUCTUREID") and not payload.get("CLASSSTRUCTUREID"):
+                    payload["CLASSSTRUCTUREID"] = icd_meta["CLASSSTRUCTUREID"]
+                if icd_meta.get("CLASSIFICATIONID") and not payload.get("CLASSIFICATIONID"):
+                    payload["CLASSIFICATIONID"] = icd_meta["CLASSIFICATIONID"]
+            else:
+                logger.warning(
+                    "open_ticket: prosseguindo sem classStructureId pois classify_icd não retornou metadados."
+                )
+        return self.post_json("/tools/abertura-chamado", payload)
 
 
 def _ticket_id(payload: Any) -> str | None:
@@ -282,10 +517,13 @@ class MockOrchestrateClient:
 
     def get_json(self, path: str, params: dict[str, Any] | None = None) -> CallResult:
         if path == "/gef/lista-origem":
-            options = [{"label": "Presencial", "value": "Presencial"}]
+            options = [{"label": "GD", "value": "GD"}, {"label": "Presencial", "value": "Presencial"}]
             return CallResult(ok=True, payload={"status": 200, "options": options})
         if path == "/gef/lista-modalidade":
-            options = [{"label": "Curso técnico", "value": "Curso técnico"}]
+            options = [
+                {"label": "APERFEIÇOAMENTO", "value": "APERFEIÇOAMENTO"},
+                {"label": "Curso técnico", "value": "Curso técnico"},
+            ]
             return CallResult(ok=True, payload={"status": 200, "options": options})
         if path == "/gef/lista-curso":
             options = [{"label": "Administração", "value": "Administração"}]
@@ -325,12 +563,31 @@ class MockOrchestrateClient:
 
     def post_json(self, path: str, body: dict[str, Any]) -> CallResult:
         if "abertura-chamado" in path or path.endswith("/relatorios/solicitar"):
+            ticket = f"MOCK-ICD-{int(time.time() * 1000) % 1000000:06d}"
             return CallResult(
-                ok=False,
-                status_code=503,
-                error_detail="mock não devolve protocolo",
+                ok=True,
+                status_code=200,
+                ticket_id=ticket,
+                payload={"status": 200, "ticket_id": ticket, "body": body},
             )
         return CallResult(ok=True, payload={"status": 200, "body": body, "path": path})
+
+    def classify_icd(self, classification_id: str) -> dict[str, str]:
+        return {
+            "COMMODITY": "015004",
+            "COMMODITYGROUP": "015",
+            "CLASSIFICATIONID": classification_id,
+            "CLASSSTRUCTUREID": "31261",
+        }
+
+    def open_ticket(self, body: dict[str, Any]) -> CallResult:
+        ticket = f"MOCK-ICD-{int(time.time() * 1000) % 1000000:06d}"
+        return CallResult(
+            ok=True,
+            status_code=200,
+            ticket_id=ticket,
+            payload={"status": 200, "ticket_id": ticket, "body": body},
+        )
 
 
 def create_orchestrate_client() -> OrchestrateClient | MockOrchestrateClient:

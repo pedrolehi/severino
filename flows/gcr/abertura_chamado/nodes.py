@@ -38,8 +38,9 @@ def _abrir(info: dict[str, str], texto: str, anexo: str) -> str:
         texto=texto,
         tema=d.TIPO_CHAMADO,
     )
+    body["area"] = "gcr"
     body["anexo"] = anexo
-    result = create_orchestrate_client().post_json("/gcr/abertura-chamado", body)
+    result = create_orchestrate_client().open_ticket(body)
     if result.ticket_id:
         return protocol_message(result.ticket_id, None)
     return protocol_message(None, result.error_detail)

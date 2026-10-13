@@ -1,0 +1,825 @@
+{
+  "version": "1.0",
+  "description": "Massa canônica de testes conversacionais E2E alinhada aos fluxos portados do Senac",
+  "total_scenarios": 15,
+  "scenarios": [
+    {
+      "id": "gep_saldo_de_horas",
+      "name": "GEP - Consulta de Saldo de Horas",
+      "flow_name": "saldo_de_horas",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Qual é o meu saldo de horas?",
+          "description": "Pergunta inicial de saldo de horas",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "banco de horas"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gep_abertura_chamado_crachas",
+      "name": "GEP - Abertura de Chamado de Crachás",
+      "flow_name": "gep_abertura_chamado_crachas",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Preciso solicitar uma segunda via de crachá",
+          "description": "Acionamento do fluxo de crachás",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_crachas",
+            "flow_step": "detalhe",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Meu crachá quebrou na catraca e preciso de uma nova via.",
+          "description": "Preenchimento do detalhe do problema",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_crachas",
+            "flow_step": "ask_anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de arquivo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [],
+            "text_contains_any": [
+              "protocolo",
+              "temporariamente indisponível",
+              "não abri o chamado"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gep_abertura_chamado_ponto_eletronico",
+      "name": "GEP - Abertura de Chamado de Ponto Eletrônico",
+      "flow_name": "gep_abertura_chamado_ponto_eletronico",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Estou com erro no ponto eletrônico",
+          "description": "Acionamento do fluxo de ponto eletrônico",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_ponto_eletronico",
+            "flow_step": "detalhe",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "O aplicativo Ponto WEB não gravou as batidas de ontem.",
+          "description": "Preenchimento do detalhe do erro",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_ponto_eletronico",
+            "flow_step": "ask_anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de arquivo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [],
+            "text_contains_any": [
+              "protocolo",
+              "temporariamente indisponível",
+              "não abri o chamado"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gep_abertura_chamado_beneficios",
+      "name": "GEP - Abertura de Chamado de Benefícios",
+      "flow_name": "gep_abertura_chamado_beneficios",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Gostaria de abrir um chamado sobre benefícios",
+          "description": "Acionamento do fluxo de benefícios",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_beneficios",
+            "flow_step": "tema",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Cooperativa",
+          "description": "Seleção do tema Cooperativa",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_beneficios",
+            "flow_step": "subtema",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Consignado",
+          "description": "Seleção do subtema Consignado",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_beneficios",
+            "flow_step": "detalhe",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Gostaria de solicitar informações para empréstimo consignado.",
+          "description": "Preenchimento do detalhe da solicitação",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_beneficios",
+            "flow_step": "ask_anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de arquivo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [],
+            "text_contains_any": [
+              "protocolo",
+              "DADOS.WSCHAMADO is undefined",
+              "temporariamente indisponível",
+              "não abri o chamado"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gep_abertura_chamado_carta_convite",
+      "name": "GEP - Abertura de Chamado de Carta Convite",
+      "flow_name": "gep_abertura_chamado_carta_convite",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Preciso abrir chamado sobre carta convite",
+          "description": "Acionamento do fluxo de carta convite",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_carta_convite",
+            "flow_step": "tema",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Dúvidas gerais",
+          "description": "Seleção do tema Dúvidas gerais",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_carta_convite",
+            "flow_step": "subtema",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Funcionários CLT",
+          "description": "Seleção do público Funcionários CLT",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_carta_convite",
+            "flow_step": "detalhe",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Dúvida referente ao processo de emissão para docente CLT.",
+          "description": "Preenchimento do detalhe",
+          "expected": {
+            "active_flow": "gep_abertura_chamado_carta_convite",
+            "flow_step": "ask_anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de arquivo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "protocolo"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_centro_de_custo_consulta",
+      "name": "GEF - Centro de Custo (Consulta)",
+      "flow_name": "centro_de_custo",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Quero consultar centro de custo",
+          "description": "Acionamento do fluxo de centro de custo",
+          "expected": {
+            "active_flow": "centro_de_custo",
+            "flow_step": "menu",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Consultar Centro de Custo",
+          "description": "Escolha da opção Consultar no menu inicial",
+          "expected": {
+            "active_flow": "centro_de_custo",
+            "flow_step": "origem",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "GD",
+          "description": "Seleção da origem",
+          "expected": {
+            "active_flow": "centro_de_custo",
+            "flow_step": "modalidade",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "APERFEIÇOAMENTO",
+          "description": "Seleção da modalidade",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "cursos"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_centro_de_custo_solicitar",
+      "name": "GEF - Centro de Custo (Solicitar Abertura)",
+      "flow_name": "centro_de_custo",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Quero consultar centro de custo",
+          "description": "Acionamento do fluxo de centro de custo",
+          "expected": {
+            "active_flow": "centro_de_custo",
+            "flow_step": "menu",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Solicitar Abertura de Centro de Custo",
+          "description": "Escolha de solicitação no menu inicial",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "Serviços Financeiros",
+              "cloud.sp.senac.br"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_segunda_via_nota_fiscal",
+      "name": "GEF - Segunda Via de Nota Fiscal",
+      "flow_name": "segunda_via_nota_fiscal",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Quero a segunda via da nota fiscal",
+          "description": "Acionamento do fluxo de nota fiscal",
+          "expected": {
+            "active_flow": "segunda_via_nota_fiscal",
+            "flow_step": "ask_sp",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Sim",
+          "description": "Prestador do município de São Paulo",
+          "expected": {
+            "active_flow": "segunda_via_nota_fiscal",
+            "flow_step": "collect_data",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "{\"form_data\": {\"cnpj_senac\": \"03.709.814/0064-71\", \"cnpj_cliente\": \"03.709.814/0064-71\", \"mes_ano\": \"02/2024\"}}",
+          "description": "Envio do formulário com CNPJs e competência reais",
+          "expected": {
+            "active_flow": "segunda_via_nota_fiscal",
+            "flow_step": null,
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Encerramento da consulta",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_relatorios_orcamentarios",
+      "name": "GEF - Relatórios Orçamentários",
+      "flow_name": "gef_relatorios_orcamentarios",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Solicitar relatório orçamentário",
+          "description": "Acionamento do fluxo de relatórios orçamentários",
+          "expected": {
+            "active_flow": "gef_relatorios_orcamentarios",
+            "flow_step": "texto",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Relatório de acompanhamento orçamentário de despesas de custeio.",
+          "description": "Preenchimento do texto",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "protocolo"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_gestao_pagamentos",
+      "name": "GEF - Gestão de Pagamentos",
+      "flow_name": "gef_gestao_pagamentos",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Problema no meu pagamento",
+          "description": "Acionamento do fluxo de gestão de pagamentos",
+          "expected": {
+            "active_flow": "gef_gestao_pagamentos",
+            "flow_step": "tipo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Recebimento não aparece",
+          "description": "Seleção do tipo Recebimento não aparece",
+          "expected": {
+            "active_flow": "gef_gestao_pagamentos",
+            "flow_step": "texto",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Divergência de valores de horas extras no holerite.",
+          "description": "Preenchimento do texto",
+          "expected": {
+            "active_flow": "gef_gestao_pagamentos",
+            "flow_step": "anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de anexo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_cancelamento_financeiro_revisao_calculo",
+      "name": "GEF - Cancelamento Financeiro (Revisão de Cálculo)",
+      "flow_name": "gef_cancelamento_financeiro",
+      "metadata": {
+        "user_info": {
+          "chapa": "1142372",
+          "nome": "FLAVIO CARVALHO MACHADO",
+          "email": "flavio.cmachado@sp.senac.br",
+          "cpf": "443.456.428-50",
+          "unidade": "CAS"
+        },
+        "business_params": {
+          "tipo": "Revisão de Cálculo",
+          "idAluno": "1140729161",
+          "idCancelamento": "123456",
+          "descricao": "Solicito revisão do cálculo das parcelas financeiras do cancelamento de matrícula do aluno."
+        }
+      },
+      "turns": [
+        {
+          "input_text": "Quero abrir chamado de cancelamento de matrícula",
+          "description": "Acionamento do fluxo de cancelamento financeiro",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "tipo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Revisão de Cálculo",
+          "description": "Seleção da situação Revisão de Cálculo",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "descricao",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Solicito revisão do cálculo das parcelas financeiras do cancelamento de matrícula do aluno.",
+          "description": "Preenchimento da descrição detalhada",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "id_aluno",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "1140729161",
+          "description": "Envio do ID do aluno (emplid)",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "requisicao",
+            "text_contains": [],
+            "text_contains_any": [
+              "requisição",
+              "cancelamento"
+            ],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "gef_cancelamento_financeiro_nao_processados",
+      "name": "GEF - Cancelamento Financeiro (Não Processados)",
+      "flow_name": "gef_cancelamento_financeiro",
+      "metadata": {
+        "user_info": {
+          "chapa": "1142372",
+          "nome": "FLAVIO CARVALHO MACHADO",
+          "email": "flavio.cmachado@sp.senac.br",
+          "cpf": "443.456.428-50",
+          "unidade": "CAS"
+        },
+        "business_params": {
+          "tipo": "Não processados",
+          "lote": false,
+          "idAluno": "1140729161",
+          "motivoMsg": "Cancelamento não processado no portal corporativo"
+        }
+      },
+      "turns": [
+        {
+          "input_text": "Abrir chamado de cancelamento não processado",
+          "description": "Acionamento do fluxo de cancelamento financeiro",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "tipo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não processados",
+          "description": "Seleção da situação Não processados",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "lote",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Recusa abertura por lote (individual)",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "descricao",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Cancelamento não foi processado no portal corporativo do aluno.",
+          "description": "Preenchimento da descrição",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "id_aluno",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "1140729161",
+          "description": "Envio do ID do aluno",
+          "expected": {
+            "active_flow": "gef_cancelamento_financeiro",
+            "flow_step": "requisicao",
+            "text_contains": [],
+            "text_contains_any": [
+              "requisição",
+              "cancelamento"
+            ],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "gcr_abertura_chamado",
+      "name": "GCR - Abertura de Chamado",
+      "flow_name": "gcr_abertura_chamado",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Preciso abrir chamado no GCR",
+          "description": "Acionamento do fluxo de abertura de chamado GCR",
+          "expected": {
+            "active_flow": "gcr_abertura_chamado",
+            "flow_step": "detalhe",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Dúvida de cliente presencial referente a pendência cadastral na unidade.",
+          "description": "Preenchimento do detalhe do problema",
+          "expected": {
+            "active_flow": "gcr_abertura_chamado",
+            "flow_step": "ask_anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de arquivo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "protocolo"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "geduc_abertura_chamado",
+      "name": "GEDUC - Abertura de Chamado (Portarias)",
+      "flow_name": "geduc_abertura_chamado",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Quero abrir chamado no GEDUC sobre solicitação de portarias",
+          "description": "Acionamento do fluxo com assunto reconhecido",
+          "expected": {
+            "active_flow": "geduc_abertura_chamado",
+            "flow_step": "subtema",
+            "text_contains": [
+              "Solicitação de portarias"
+            ],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Designação de diretor e secretário escolar",
+          "description": "Seleção da portaria desejada no submenu",
+          "expected": {
+            "active_flow": "geduc_abertura_chamado",
+            "flow_step": "detalhe",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Solicitação de portaria para novo diretor da unidade escolar Lapa Tito.",
+          "description": "Preenchimento do detalhe da solicitação",
+          "expected": {
+            "active_flow": "geduc_abertura_chamado",
+            "flow_step": "ask_anexo",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Não",
+          "description": "Dispensa envio de arquivo",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [],
+            "text_contains_any": [
+              "protocolo",
+              "temporariamente indisponível",
+              "não abri o chamado"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "gpg_consulta_documentos",
+      "name": "GPG - Consulta de Documentos",
+      "flow_name": "consulta_documentos",
+      "metadata": {},
+      "turns": [
+        {
+          "input_text": "Quero consultar meus documentos",
+          "description": "Acionamento do fluxo de consulta de documentos",
+          "expected": {
+            "active_flow": "consulta_documentos",
+            "flow_step": "keyword",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "comprovante",
+          "description": "Envio da palavra-chave de busca",
+          "expected": {
+            "active_flow": "consulta_documentos",
+            "flow_step": "next",
+            "text_contains": [],
+            "has_ui": true,
+            "ui_component": null,
+            "is_done": null
+          }
+        },
+        {
+          "input_text": "Encerrar",
+          "description": "Encerramento da consulta",
+          "expected": {
+            "active_flow": null,
+            "flow_step": null,
+            "text_contains": [
+              "Consulta encerrada"
+            ],
+            "has_ui": null,
+            "ui_component": null,
+            "is_done": true
+          }
+        }
+      ]
+    }
+  ]
+}

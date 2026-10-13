@@ -1,4 +1,7 @@
-"""Abertura GEDUC. O assunto sai da frase do usuário."""
+"""Domínio — abertura GEDUC.
+
+Reproduz fielmente os assuntos, submenus e regras de negócio do Abertura_chamado_GEDUC.json.
+"""
 
 from __future__ import annotations
 
@@ -39,6 +42,70 @@ SUBJECTS: list[tuple[str, tuple[str, ...]]] = [
         ("cancelamento da publicação", "publicação de concluintes"),
     ),
     ("Cadastro de oferta especial", ("oferta especial",)),
+]
+
+SUBMENUS: dict[str, list[tuple[str, str]]] = {
+    "Solicitação de portarias": [
+        ("Abertura e funcionamento da unidade educacional", "Abertura e funcionamento da unidade educacional"),
+        ("Alteração de razão social da unidade educacional", "Alteração de razão social da unidade educacional"),
+        ("Designação de diretor e secretário escolar", "Designação de diretor e secretário escolar"),
+        ("Encerramento da unidade educacional", "Encerramento da unidade educacional"),
+        ("Extinção da unidade educacional", "Extinção da unidade educacional"),
+        ("Mudança de endereço da unidade educacional", "Mudança de endereço da unidade educacional"),
+        ("Suspensão da unidade educacional", "Suspensão da unidade educacional"),
+    ],
+    "Esclarecimento sobre o processo de cancelamento educacional": [
+        ("Atribuir motivos de saídas na aula", "Atribuir motivos de saídas na aula"),
+        ("Cancelamento indevido", "Cancelamento indevido"),
+        ("Cancelar aulas", "Cancelar aulas"),
+        ("Cancelar matrícula após término da UC/curso", "Cancelar matrícula após término da UC/curso"),
+        ("Dar saída após rematrícula", "Dar saída após rematrícula"),
+        ("Erro na execução do processo já estabelecido", "Erro na execução do processo já estabelecido"),
+        ("Inserir data retroativa", "Inserir data retroativa"),
+    ],
+    "Esclarecimentos sobre registros escolares no diário de classe - cursos técnicos, FIC e EMED": [
+        ("Atividades desenvolvidas", "Atividades desenvolvidas"),
+        ("Avaliação do processo", "Avaliação do processo"),
+        ("Frequência", "Frequência"),
+        ("Registro de estágio", "Registro de estágio"),
+    ],
+    "Esclarecimento sobre o processo de matrícula": [
+        ("Anexar documentos ao prontuário digital", "Anexar documentos ao prontuário digital"),
+        ("Atualizar dados cadastrais", "Atualizar dados cadastrais"),
+        ("Cadastrar informações no sistema", "Cadastrar informações no sistema"),
+        ("Conferir requisitos de acesso", "Conferir requisitos de acesso"),
+        ("Entregar documentos aos estudantes", "Entregar documentos aos estudantes"),
+        ("Fazer visto confere", "Fazer visto confere"),
+        ("Providenciar passe escolar", "Providenciar passe escolar"),
+        ("Receber documentos obrigatórios", "Receber documentos obrigatórios"),
+        ("Validar legibilidade dos documentos recebidos", "Validar legibilidade dos documentos recebidos"),
+    ],
+    "Esclarecimentos sobre o processo de encerramento de registros escolares - Encerramento de cursos": [
+        ("Fechamento de cursos EMED", "Fechamento de cursos EMED"),
+        ("Fechamento de cursos FIC", "Fechamento de cursos FIC"),
+        ("Fechamento de cursos Técnicos", "Fechamento de cursos Técnicos"),
+    ],
+    "Sistec": [
+        ("Cadastro de alunos", "Cadastro de alunos"),
+        ("Cadastro de classes", "Cadastro de classes"),
+        ("Cadastro de rendimentos dos alunos", "Cadastro de rendimentos dos alunos"),
+        ("Outros temas relacionados ao Sistec", "Outros temas relacionados ao Sistec"),
+    ],
+    "SED": [
+        ("Cadastro de alunos", "Cadastro de alunos"),
+        ("Cadastro de classes", "Cadastro de classes"),
+        ("Cadastro de rendimentos dos alunos", "Cadastro de rendimentos dos alunos"),
+        ("Outros temas relacionados ao SED", "Outros temas relacionados ao SED"),
+    ],
+    "Atualização de dados cadastrais dos concluintes na Secretaria da Educação do Estado – SEE/SP": [
+        ("Documento do aluno", "Documento do aluno"),
+        ("Nome do aluno", "Nome do aluno"),
+    ],
+}
+
+ASK_ANEXO = [
+    ("Sim", "sim"),
+    ("Não", "nao"),
 ]
 
 
