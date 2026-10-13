@@ -298,10 +298,11 @@ class ICDAuditAndCleanerRobot:
                     }
                 }
 
-                // 3. Procura por elementos com id contendo ownergroup
+                // 3. Procura por elementos com id contendo ownergroup (ignorando scripts internos do Maximo)
                 for (const el of document.querySelectorAll('[id*="ownergroup"], [id*="OWNERGROUP"]')) {
+                    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
                     const text = (el.innerText || el.textContent || el.value || '').trim();
-                    if (text && text !== '-' && !/Grupo de Atendimento/i.test(text)) {
+                    if (text && text !== '-' && !/Grupo de Atendimento/i.test(text) && !text.includes('clientAreaId') && !text.includes('=')) {
                         return text.split('\n')[0].trim();
                     }
                 }
@@ -580,6 +581,15 @@ class ICDAuditAndCleanerRobot:
         excluidos_count = sum(1 for r in results if r.reclassificado)
         manual_count = sum(1 for r in results if r.manual_action_required)
 
+        # Carrega dados da bateria de testes conversacionais para unificar no relatório HTML
+        test_run_data = None
+        latest_test_json = find_latest_report()
+        if latest_test_json and latest_test_json.exists():
+            try:
+                test_run_data = json.loads(latest_test_json.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
         report_data = {
             "timestamp": datetime.now().isoformat(),
             "timestamp_str": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
@@ -588,6 +598,7 @@ class ICDAuditAndCleanerRobot:
             "nao_enfileirados_count": nao_enfileirados_count,
             "excluidos_count": excluidos_count,
             "manual_count": manual_count,
+            "test_run": test_run_data,
             "items": [
                 {
                     "ticket_id": r.ticket_id,

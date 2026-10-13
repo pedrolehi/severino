@@ -72,6 +72,23 @@ def prune_old_reports(reports_dir: Path, keep: int = 10) -> list[Path]:
     return deleted_files
 
 
+def classify_scenario_type(scenario: dict[str, Any]) -> tuple[str, str, bool]:
+    """Retorna (codigo_tipo, label_tipo, is_chamado)."""
+    sc_id = scenario.get("scenario_id", "").lower()
+    sc_name = scenario.get("scenario_name", "").lower()
+    flow = scenario.get("flow_name", "").lower()
+    tickets = scenario.get("tickets", [])
+
+    if len(tickets) > 0:
+        return "chamado", "🎫 Abertura de Chamado", True
+
+    keywords = ["abertura", "chamado", "cancelamento", "pagamentos", "orcamentarios", "solicitar"]
+    if any(k in sc_id or k in sc_name or k in flow for k in keywords):
+        return "chamado", "🎫 Abertura de Chamado", True
+
+    return "consulta", "ℹ️ Consulta / Informativo", False
+
+
 def generate_html_report(
     report_data: dict[str, Any],
     output_path: Path,
@@ -88,6 +105,163 @@ def generate_html_report(
     excluidos_sucesso = report_data.get("excluidos_count", 0)
     manuais = report_data.get("manual_count", 0)
     items = report_data.get("items", [])
+
+    # Carrega dados da bateria de testes se disponíveis
+    test_run = report_data.get("test_run")
+    if not test_run and reports_dir.is_dir():
+        test_run_files = sorted(reports_dir.glob("test_run_*.json"), key=os.path.getmtime, reverse=True)
+        if test_run_files:
+            try:
+                test_run = json.loads(test_run_files[0].read_text(encoding="utf-8"))
+            except Exception:
+                test_run = None
+
+    test_summary_html = ""
+    scenarios_table_html = ""
+    closure_banner_html = ""
+
+    if test_run:
+        test_total = test_run.get("total_scenarios", 0)
+        test_passed = test_run.get("passed", 0)
+        test_failed = test_run.get("failed", 0)
+        test_duration_s = round(test_run.get("total_duration_ms", 0) / 1000.0, 1)
+        test_rate = round((test_passed / test_total * 100.0), 1) if test_total > 0 else 0.0
+        test_results = test_run.get("results", [])
+
+        # Resumo centralizado das métricas dos testes (sem despejar erros detalhados)
+        test_summary_html = f"""
+    <div class="test-summary-card">
+      <div class="test-summary-header">
+        <div class="test-summary-title">
+          <span>🧪 Resultado da Bateria de Testes Conversacionais E2E</span>
+        </div>
+        <p class="test-summary-desc">Métricas consolidadas de validação funcional dos fluxos do Assistente Virtual</p>
+      </div>
+      <div class="test-metrics-pills">
+        <div class="test-pill">
+          <span class="test-pill-label">Total de Cenários</span>
+          <span class="test-pill-val">{test_total}</span>
+        </div>
+        <div class="test-pill pass">
+          <span class="test-pill-label">Passaram no Teste</span>
+          <span class="test-pill-val">{test_passed} ✅</span>
+        </div>
+        <div class="test-pill fail">
+          <span class="test-pill-label">Falharam no Teste</span>
+          <span class="test-pill-val">{test_failed} ❌</span>
+        </div>
+        <div class="test-pill rate">
+          <span class="test-pill-label">Taxa de Sucesso</span>
+          <span class="test-pill-val">{test_rate}%</span>
+        </div>
+        <div class="test-pill">
+          <span class="test-pill-label">Duração Total</span>
+          <span class="test-pill-val">{test_duration_s}s</span>
+        </div>
+      </div>
+    </div>
+"""
+
+        # Mapeia itens de auditoria por ticket_id
+        items_by_ticket = {{str(it.get("ticket_id", "")).strip(): it for it in items}}
+
+        # Matriz dos cenários classificando Chamados vs Consultas e status de encerramento
+        rows_html = ""
+        for idx, sc in enumerate(test_results, 1):
+            sc_name = html.escape(sc.get("scenario_name") or sc.get("scenario_id") or f"Cenário {idx}")
+            flow = html.escape(sc.get("flow_name") or "")
+            sc_passed = sc.get("passed", False)
+            tickets = sc.get("tickets", [])
+
+            type_code, type_label, is_chamado = classify_scenario_type(sc)
+            type_badge = f'<span class="badge-type {type_code}">{type_label}</span>'
+            pass_badge = '<span class="badge-pill-pass">✅ PASS</span>' if sc_passed else '<span class="badge-pill-fail">❌ FAIL</span>'
+
+            if tickets:
+                tid = tickets[0].get("ticket_id", "")
+                link = f"https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid={tid}"
+                ticket_cell = f'<a href="{link}" target="_blank" class="ticket-link">#{tid} ↗</a>'
+                
+                audit = items_by_ticket.get(str(tid).strip())
+                if audit:
+                    if audit.get("reclassificado"):
+                        icd_status = '<span class="badge-status success">✓ Excluído no ICD (Chamado Teste)</span>'
+                    elif audit.get("manual_action_required"):
+                        icd_status = '<span class="badge-status danger">🚨 Exclusão Manual Requerida</span>'
+                    else:
+                        icd_status = '<span class="badge-status warning">Pendente de Exclusão</span>'
+                else:
+                    icd_status = '<span class="badge-status success">✓ Registrado no ICD</span>'
+            else:
+                ticket_cell = '<span class="cell-muted">—</span>'
+                if is_chamado:
+                    icd_status = '<span class="cell-muted">Não gerado (Interrompido antes da abertura)</span>'
+                else:
+                    icd_status = '<span class="cell-muted">Fluxo informativo (Não gera chamado)</span>'
+
+            rows_html += f"""
+        <tr>
+          <td style="color: var(--text-muted); text-align: center; font-weight: 600;">{idx}</td>
+          <td>
+            <div style="font-weight: 600; color: #fff;">{sc_name}</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: {flow}</div>
+          </td>
+          <td>{type_badge}</td>
+          <td>{pass_badge}</td>
+          <td>{ticket_cell}</td>
+          <td>{icd_status}</td>
+        </tr>
+"""
+
+        scenarios_table_html = f"""
+    <div class="section-title">
+      <span>📋 Matriz dos Cenários: Classificação de Chamados & Encerramento no ICD</span>
+    </div>
+
+    <div class="scenarios-table-container">
+      <table class="scenarios-table">
+        <thead>
+          <tr>
+            <th style="width: 50px; text-align: center;">#</th>
+            <th>Cenário / Fluxo</th>
+            <th style="width: 220px;">Tipo de Fluxo</th>
+            <th style="width: 120px;">Resultado Teste</th>
+            <th style="width: 140px;">Chamado ICD</th>
+            <th style="width: 270px;">Status no ICD (Encerramento)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows_html}
+        </tbody>
+      </table>
+    </div>
+"""
+
+    # Banner de Garantia de Encerramento dos Chamados
+    if total > 0 and excluidos_sucesso == total:
+        closure_banner_html = f"""
+    <div class="closure-banner">
+      <div style="font-size: 1.6rem;">🛡️</div>
+      <div>
+        <strong style="color: #34d399; font-size: 1rem;">Garantia de Limpeza do Ambiente (100% dos Chamados Encerrados):</strong>
+        <p style="color: #cbd5e1; font-size: 0.9rem; margin-top: 0.2rem;">
+          Todos os <strong>{total} chamados</strong> gerados durante a bateria de testes foram auditados e <strong>devidamente encerrados/excluídos no IBM Control Desk</strong> (reclassificados como <em>'Excluir chamado teste'</em>). Nenhum chamado ficou pendente na fila de atendimento!
+        </p>
+      </div>
+    </div>
+"""
+    elif manuais > 0:
+        closure_banner_html = f"""
+    <div class="closure-banner warning">
+      <div style="font-size: 1.6rem;">⚠️</div>
+      <div>
+        <strong style="color: #fbbf24; font-size: 1rem;">Atenção: Intervenção Manual Necessária no ICD</strong>
+        <p style="color: #cbd5e1; font-size: 0.9rem; margin-top: 0.2rem;">
+          {manuais} chamado(s) precisam de cancelamento manual direto no Maximo. Utilize os links na tabela abaixo.
+        </p>
+      </div>
+    </div>
+"""
 
     # HTML Template com CSS Vanilla embutido
     html_content = f"""<!DOCTYPE html>
@@ -425,6 +599,182 @@ def generate_html_report(
       line-height: 1;
     }}
 
+    /* Resumo Centralizado da Bateria de Testes */
+    .test-summary-card {{
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1.25rem;
+    }}
+    .test-summary-header {{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }}
+    .test-summary-title {{
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }}
+    .test-summary-desc {{
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 700px;
+    }}
+    .test-metrics-pills {{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      width: 100%;
+    }}
+    .test-pill {{
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 150px;
+      flex: 1 1 150px;
+      max-width: 220px;
+      transition: transform 0.2s;
+    }}
+    .test-pill:hover {{
+      transform: translateY(-2px);
+    }}
+    .test-pill-label {{
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }}
+    .test-pill-val {{
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin-top: 0.2rem;
+    }}
+    .test-pill.pass .test-pill-val {{ color: var(--success); }}
+    .test-pill.fail .test-pill-val {{ color: var(--danger); }}
+    .test-pill.rate .test-pill-val {{ color: var(--primary-light); }}
+
+    /* Matriz dos Cenários */
+    .scenarios-table-container {{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      margin-bottom: 2.5rem;
+    }}
+    .scenarios-table {{
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }}
+    .scenarios-table th {{
+      background: rgba(15, 23, 42, 0.95);
+      padding: 0.9rem 1.1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }}
+    .scenarios-table td {{
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+      vertical-align: middle;
+    }}
+    .scenarios-table tr:hover td {{
+      background: rgba(255, 255, 255, 0.02);
+    }}
+    .badge-type {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }}
+    .badge-type.chamado {{
+      background: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }}
+    .badge-type.consulta {{
+      background: rgba(148, 163, 184, 0.15);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }}
+    .badge-pill-pass {{
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+    }}
+    .badge-pill-fail {{
+      display: inline-block;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+    }}
+    .ticket-link {{
+      color: var(--primary-light);
+      font-weight: 700;
+      text-decoration: none;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }}
+    .ticket-link:hover {{
+      text-decoration: underline;
+    }}
+    .cell-muted {{
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }}
+    .closure-banner {{
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }}
+    .closure-banner.warning {{
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }}
+
     footer {{
       margin-top: 3rem;
       padding-top: 1.5rem;
@@ -440,16 +790,24 @@ def generate_html_report(
     <header>
       <div class="title-group">
         <h1>📊 Auditoria e Enfileiramento no ICD (Senac)</h1>
-        <p>Relatório de validação de roteamento de chamados e exclusão de teste</p>
+        <p>Relatório integrado de testes conversacionais e validação de chamados no Maximo</p>
       </div>
       <div>
         <span class="badge-env">Gerado em: {timestamp_str}</span>
       </div>
     </header>
 
+    {test_summary_html}
+
+    {closure_banner_html}
+
+    <div class="section-title">
+      <span>🛡️ Métricas de Auditoria & Enfileiramento no ICD</span>
+    </div>
+
     <div class="metrics-grid">
       <div class="metric-card">
-        <span class="metric-label">Total de Chamados</span>
+        <span class="metric-label">Total de Chamados Gerados</span>
         <span class="metric-value">{total}</span>
       </div>
       <div class="metric-card success">
@@ -457,7 +815,7 @@ def generate_html_report(
         <span class="metric-value">{enfileirados}</span>
       </div>
       <div class="metric-card warning">
-        <span class="metric-label">Não Enfileirados (4m)</span>
+        <span class="metric-label">Não Enfileirados</span>
         <span class="metric-value">{nao_enfileirados}</span>
       </div>
       <div class="metric-card success">
@@ -479,8 +837,10 @@ def generate_html_report(
       </div>
     </div>
 
+    {scenarios_table_html}
+
     <div class="section-title">
-      <span>📋 Detalhamento dos Chamados Auditados</span>
+      <span>📋 Detalhamento dos Chamados Auditados (Evidências & Prints)</span>
     </div>
 
     <div class="tickets-list">
