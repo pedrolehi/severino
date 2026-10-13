@@ -333,6 +333,182 @@
       line-height: 1;
     }
 
+    /* Resumo Centralizado da Bateria de Testes */
+    .test-summary-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1.25rem;
+    }
+    .test-summary-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .test-summary-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .test-summary-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 700px;
+    }
+    .test-metrics-pills {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .test-pill {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 150px;
+      flex: 1 1 150px;
+      max-width: 220px;
+      transition: transform 0.2s;
+    }
+    .test-pill:hover {
+      transform: translateY(-2px);
+    }
+    .test-pill-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .test-pill-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin-top: 0.2rem;
+    }
+    .test-pill.pass .test-pill-val { color: var(--success); }
+    .test-pill.fail .test-pill-val { color: var(--danger); }
+    .test-pill.rate .test-pill-val { color: var(--primary-light); }
+
+    /* Matriz dos Cenários */
+    .scenarios-table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      margin-bottom: 2.5rem;
+    }
+    .scenarios-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    .scenarios-table th {
+      background: rgba(15, 23, 42, 0.95);
+      padding: 0.9rem 1.1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .scenarios-table td {
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+      vertical-align: middle;
+    }
+    .scenarios-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .badge-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-type.chamado {
+      background: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .badge-type.consulta {
+      background: rgba(148, 163, 184, 0.15);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+    .badge-pill-pass {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+    .badge-pill-fail {
+      display: inline-block;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+    .ticket-link {
+      color: var(--primary-light);
+      font-weight: 700;
+      text-decoration: none;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+    .ticket-link:hover {
+      text-decoration: underline;
+    }
+    .cell-muted {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .closure-banner {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .closure-banner.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
     footer {
       margin-top: 3rem;
       padding-top: 1.5rem;
@@ -348,16 +524,61 @@
     <header>
       <div class="title-group">
         <h1>📊 Auditoria e Enfileiramento no ICD (Senac)</h1>
-        <p>Relatório de validação de roteamento de chamados e exclusão de teste</p>
+        <p>Relatório integrado de testes conversacionais e validação de chamados no Maximo</p>
       </div>
       <div>
         <span class="badge-env">Gerado em: 13/10/2026 17:55:46</span>
       </div>
     </header>
 
+    <div class="test-summary-card">
+      <div class="test-summary-header">
+        <div class="test-summary-title">
+          <span>🧪 Resultado da Bateria de Testes Conversacionais E2E</span>
+        </div>
+        <p class="test-summary-desc">Métricas consolidadas de validação funcional dos fluxos do Assistente Virtual</p>
+      </div>
+      <div class="test-metrics-pills">
+        <div class="test-pill">
+          <span class="test-pill-label">Total de Cenários</span>
+          <span class="test-pill-val">15</span>
+        </div>
+        <div class="test-pill pass">
+          <span class="test-pill-label">Passaram no Teste</span>
+          <span class="test-pill-val">7 ✅</span>
+        </div>
+        <div class="test-pill fail">
+          <span class="test-pill-label">Falharam no Teste</span>
+          <span class="test-pill-val">8 ❌</span>
+        </div>
+        <div class="test-pill rate">
+          <span class="test-pill-label">Taxa de Sucesso</span>
+          <span class="test-pill-val">46.7%</span>
+        </div>
+        <div class="test-pill">
+          <span class="test-pill-label">Duração Total</span>
+          <span class="test-pill-val">107.4s</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="closure-banner">
+      <div style="font-size: 1.6rem;">🛡️</div>
+      <div>
+        <strong style="color: #34d399; font-size: 1rem;">Garantia de Limpeza do Ambiente (100% dos Chamados Encerrados):</strong>
+        <p style="color: #cbd5e1; font-size: 0.9rem; margin-top: 0.2rem;">
+          Todos os <strong>4 chamados</strong> gerados durante a bateria de testes foram auditados e <strong>devidamente encerrados/excluídos no IBM Control Desk</strong> (reclassificados como <em>'Excluir chamado teste'</em>). Nenhum chamado ficou pendente na fila de atendimento!
+        </p>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>🛡️ Métricas de Auditoria & Enfileiramento no ICD</span>
+    </div>
+
     <div class="metrics-grid">
       <div class="metric-card">
-        <span class="metric-label">Total de Chamados</span>
+        <span class="metric-label">Total de Chamados Gerados</span>
         <span class="metric-value">4</span>
       </div>
       <div class="metric-card success">
@@ -365,7 +586,7 @@
         <span class="metric-value">4</span>
       </div>
       <div class="metric-card warning">
-        <span class="metric-label">Não Enfileirados (4m)</span>
+        <span class="metric-label">Não Enfileirados</span>
         <span class="metric-value">0</span>
       </div>
       <div class="metric-card success">
@@ -388,7 +609,193 @@
     </div>
 
     <div class="section-title">
-      <span>📋 Detalhamento dos Chamados Auditados</span>
+      <span>📋 Matriz dos Cenários: Classificação de Chamados & Encerramento no ICD</span>
+    </div>
+
+    <div class="scenarios-table-container">
+      <table class="scenarios-table">
+        <thead>
+          <tr>
+            <th style="width: 50px; text-align: center;">#</th>
+            <th>Cenário / Fluxo</th>
+            <th style="width: 220px;">Tipo de Fluxo</th>
+            <th style="width: 120px;">Resultado Teste</th>
+            <th style="width: 140px;">Chamado ICD</th>
+            <th style="width: 270px;">Status no ICD (Encerramento)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">1</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEP - Consulta de Saldo de Horas</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: saldo_de_horas</div>
+            </td>
+            <td><span class="badge-type consulta">ℹ️ Consulta / Informativo</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Fluxo informativo (Não gera chamado)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">2</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEP - Abertura de Chamado de Crachás</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gep_abertura_chamado_crachas</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614352" target="_blank" class="ticket-link">#6614352 ↗</a></td>
+            <td><span class="badge-status success">✓ Excluído no ICD (Chamado Teste)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">3</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEP - Abertura de Chamado de Ponto Eletrônico</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gep_abertura_chamado_ponto_eletronico</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">4</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEP - Abertura de Chamado de Benefícios</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gep_abertura_chamado_beneficios</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614354" target="_blank" class="ticket-link">#6614354 ↗</a></td>
+            <td><span class="badge-status success">✓ Excluído no ICD (Chamado Teste)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">5</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEP - Abertura de Chamado de Carta Convite</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gep_abertura_chamado_carta_convite</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">6</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Centro de Custo (Consulta)</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: centro_de_custo</div>
+            </td>
+            <td><span class="badge-type consulta">ℹ️ Consulta / Informativo</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Fluxo informativo (Não gera chamado)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">7</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Centro de Custo (Solicitar Abertura)</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: centro_de_custo</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">8</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Segunda Via de Nota Fiscal</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: segunda_via_nota_fiscal</div>
+            </td>
+            <td><span class="badge-type consulta">ℹ️ Consulta / Informativo</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Fluxo informativo (Não gera chamado)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">9</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Relatórios Orçamentários</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gef_relatorios_orcamentarios</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614359" target="_blank" class="ticket-link">#6614359 ↗</a></td>
+            <td><span class="badge-status success">✓ Excluído no ICD (Chamado Teste)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">10</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Gestão de Pagamentos</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gef_gestao_pagamentos</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614361" target="_blank" class="ticket-link">#6614361 ↗</a></td>
+            <td><span class="badge-status success">✓ Excluído no ICD (Chamado Teste)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">11</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Cancelamento Financeiro (Revisão de Cálculo)</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gef_cancelamento_financeiro</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">12</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEF - Cancelamento Financeiro (Não Processados)</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gef_cancelamento_financeiro</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">13</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GCR - Abertura de Chamado</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: gcr_abertura_chamado</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">14</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GEDUC - Abertura de Chamado (Portarias)</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: geduc_abertura_chamado</div>
+            </td>
+            <td><span class="badge-type chamado">🎫 Abertura de Chamado</span></td>
+            <td><span class="badge-pill-fail">❌ FAIL</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Não gerado (Interrompido antes da abertura)</span></td>
+          </tr>
+          <tr>
+            <td style="color: var(--text-muted); text-align: center; font-weight: 600;">15</td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">GPG - Consulta de Documentos</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">fluxo: consulta_documentos</div>
+            </td>
+            <td><span class="badge-type consulta">ℹ️ Consulta / Informativo</span></td>
+            <td><span class="badge-pill-pass">✅ PASS</span></td>
+            <td><span class="cell-muted">—</span></td>
+            <td><span class="cell-muted">Fluxo informativo (Não gera chamado)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">
+      <span>📋 Detalhamento dos Chamados Auditados (Evidências & Prints)</span>
     </div>
 
     <div class="tickets-list">
