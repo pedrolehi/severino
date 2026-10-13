@@ -35,7 +35,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 ),
             ),
             Turn(
-                input_text="Meu crachá quebrou na catraca e preciso de uma nova via.",
+                input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Meu crachá quebrou na catraca e preciso de uma nova via.",
                 description="Preenchimento do detalhe do problema",
                 expected=TurnExpected(
                     active_flow="gep_abertura_chamado_crachas",
@@ -48,7 +48,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 description="Dispensa envio de arquivo",
                 expected=TurnExpected(
                     is_done=True,
-                    text_contains_any=["protocolo", "temporariamente indisponível", "não abri o chamado"],
+                    text_contains=["protocolo"],
                 ),
             ),
         ],
@@ -68,7 +68,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 ),
             ),
             Turn(
-                input_text="O aplicativo Ponto WEB não gravou as batidas de ontem.",
+                input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] O aplicativo Ponto WEB não gravou as batidas de ontem.",
                 description="Preenchimento do detalhe do erro",
                 expected=TurnExpected(
                     active_flow="gep_abertura_chamado_ponto_eletronico",
@@ -81,7 +81,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 description="Dispensa envio de arquivo",
                 expected=TurnExpected(
                     is_done=True,
-                    text_contains_any=["protocolo", "temporariamente indisponível", "não abri o chamado"],
+                    text_contains=["protocolo"],
                 ),
             ),
         ],
@@ -119,7 +119,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 ),
             ),
             Turn(
-                input_text="Gostaria de solicitar informações para empréstimo consignado.",
+                input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Gostaria de solicitar informações para empréstimo consignado.",
                 description="Preenchimento do detalhe da solicitação",
                 expected=TurnExpected(
                     active_flow="gep_abertura_chamado_beneficios",
@@ -132,12 +132,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 description="Dispensa envio de arquivo",
                 expected=TurnExpected(
                     is_done=True,
-                    text_contains_any=[
-                        "protocolo",
-                        "DADOS.WSCHAMADO is undefined",
-                        "temporariamente indisponível",
-                        "não abri o chamado",
-                    ],
+                    text_contains=["protocolo"],
                 ),
             ),
         ],
@@ -175,7 +170,7 @@ GEP_SCENARIOS: list[Scenario] = [
                 ),
             ),
             Turn(
-                input_text="Dúvida referente ao processo de emissão para docente CLT.",
+                input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Dúvida referente ao processo de emissão para docente CLT.",
                 description="Preenchimento do detalhe",
                 expected=TurnExpected(
                     active_flow="gep_abertura_chamado_carta_convite",

@@ -78,6 +78,8 @@ def submeter_chamado_gep(
     tema: str,
     subtema: str = "",
     anexo: str = "",
+    description: str | None = None,
+    ticketspecs: list[dict[str, Any]] | None = None,
 ) -> str:
     body = pessoa_body(
         info,
@@ -86,6 +88,8 @@ def submeter_chamado_gep(
         texto=texto,
         tema=tema,
         subtema=subtema,
+        description=description,
+        ticketspecs=ticketspecs,
     )
     if anexo:
         body["anexo"] = anexo

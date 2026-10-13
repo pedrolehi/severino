@@ -20,7 +20,7 @@ GCR_SCENARIOS: list[Scenario] = [
                 ),
             ),
             Turn(
-                input_text="Dúvida de cliente presencial referente a pendência cadastral na unidade.",
+                input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Dúvida de cliente presencial referente a pendência cadastral na unidade.",
                 description="Preenchimento do detalhe do problema",
                 expected=TurnExpected(
                     active_flow="gcr_abertura_chamado",

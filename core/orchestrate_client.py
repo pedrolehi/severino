@@ -451,7 +451,54 @@ class OrchestrateClient:
                 logger.warning(
                     "open_ticket: prosseguindo sem classStructureId pois classify_icd não retornou metadados."
                 )
-        return self.post_json("/tools/abertura-chamado", payload)
+
+        nome = str(payload.get("REPORTEDBY") or payload.get("nome") or "").strip()
+        email = str(payload.get("REPORTEDEMAIL") or payload.get("email") or "").strip()
+        unidade = str(payload.get("LOCATION") or payload.get("unidade") or "CAS").strip()
+        classification = str(payload.get("CLASSIFICATIONID") or payload.get("classificationId") or "").strip()
+        class_structure_id = str(payload.get("CLASSSTRUCTUREID") or payload.get("classStructureId") or "").strip()
+        commodity = str(payload.get("COMMODITY") or payload.get("commodity") or "").strip()
+        commodity_group = str(payload.get("COMMODITYGROUP") or payload.get("commodityGroup") or "").strip()
+        description = str(payload.get("DESCRIPTION") or payload.get("shortDescription") or payload.get("tipo_chamado") or "").strip()
+        long_description = str(
+            payload.get("DESCRIPTION_LONGDESCRIPTION")
+            or payload.get("longDescription")
+            or payload.get("texto")
+            or ""
+        ).strip()
+
+        clean_payload: dict[str, Any] = {
+            "CREATEDBY": "MXINTADM",
+            "EXTERNALSYSTEM": "CATÁLOGO DE SERVIÇOS",
+            "MEIO_DE_ABERTURA": "Assistente Virtual do Senac - Administrativo",
+            "REPORTEDBY": nome,
+            "AFFECTEDPERSON": nome,
+            "REPORTEDEMAIL": email,
+            "AFFECTEDEMAIL": email,
+            "CLASSIFICATIONID": classification,
+            "CLASSSTRUCTUREID": class_structure_id,
+            "COMMODITY": commodity,
+            "COMMODITYGROUP": commodity_group,
+            "DESCRIPTION": description,
+            "DESCRIPTION_LONGDESCRIPTION": long_description,
+            "LOCATION": unidade,
+            "CURSO": "",
+            "UNIDADE_CURSO": "",
+            "SNCCODIGOOFERTA": "",
+            "SNCINSCRICAO": "",
+        }
+
+        # Specs apenas se preenchidas e com itens
+        specs = payload.get("TICKETSPECS") or payload.get("ticketSpecs")
+        if isinstance(specs, list) and len(specs) > 0:
+            clean_payload["TICKETSPECS"] = specs
+
+        # Anexo apenas se preenchido
+        anexo = payload.get("anexo")
+        if anexo and isinstance(anexo, (dict, str)) and bool(anexo):
+            clean_payload["anexo"] = anexo
+
+        return self.post_json("/tools/abertura-chamado", clean_payload)
 
 
 def _ticket_id(payload: Any) -> str | None:

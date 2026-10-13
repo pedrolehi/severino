@@ -105,6 +105,8 @@ def gep_abertura_chamado_crachas_node(state: MultiAgentState) -> dict:
             texto=str(flow_data.get("texto") or ""),
             tema=d.TIPO_CHAMADO,
             anexo="",
+            description=d.DESCRIPTION,
+            ticketspecs=d.TICKET_SPECS,
         )
         return pack(
             flow_name=d.FLOW_NAME,
@@ -131,6 +133,8 @@ def gep_abertura_chamado_crachas_node(state: MultiAgentState) -> dict:
         texto=str(flow_data.get("texto") or ""),
         tema=d.TIPO_CHAMADO,
         anexo=anexo,
+        description=d.DESCRIPTION,
+        ticketspecs=d.TICKET_SPECS,
     )
     return pack(
         flow_name=d.FLOW_NAME,

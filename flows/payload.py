@@ -76,7 +76,141 @@ def anexo_texto(data: dict[str, Any], key: str = "anexo") -> str:
     return ""
 
 
-def pessoa_body(info: dict[str, str], *, tipo: str, classification: str, texto: str, tema: str, subtema: str = "") -> dict[str, Any]:
+# Tabela de descrições oficiais do Catálogo de Serviços do Senac (alinhada ao IBM Control Desk / Maximo)
+GEP_FIXED_DESCRIPTIONS: dict[str, str] = {
+    "Crachás": "Gestão de Pessoas,Administração de Pessoal,Esclarecimento sobre emissão de crachás",
+    "Ponto eletrônico": "Gestão da Tecnologia,Suporte para Sistemas,Relatar um erro,Relatar um erro",
+    "Ajustes de dados cadastrais": "Gestão de pessoas, Administração de Pessoal, Ajuste de dados no Rhevolution para Pessoa Física",
+    "Alteração de dados cadastrais/bancários - PF": "Gestão de pessoas, Administração de Pessoal, Ajuste de dados no Rhevolution para Pessoa Física",
+    "Ajuste de dados bancários": "Ajuste de dados no Rhevolution para Pessoa Física",
+    "Consulta Juridica": "Gestão de Pessoas,Consulta Jurídica,Consulta jurídica para contratações de prestadores de serviço carta convite - Pessoa Física/Jurídica",
+    "Consulta juridica": "Gestão de Pessoas,Consulta Jurídica,Consulta jurídica para contratações de prestadores de serviço carta convite - Pessoa Física/Jurídica",
+    "Dúvidas gerais": "Gestão de pessoas,Dúvidas sobre prestadores de serviço carta convite PF e PJ",
+    "RPA - Consulta PF": "Gestão da Tecnologia,Suporte para Sistemas,Relatar um erro,Relatar um erro",
+    "Problemas ou indisponibilidade do robô": "Gestão da Tecnologia,Suporte para Sistemas,Relatar um erro,Relatar um erro",
+}
+
+# Metadados de classificação conhecidos do Maximo (cache fixo de homologação e produção)
+ICD_KNOWN_METADATA: dict[str, dict[str, str]] = {
+    "SNC_INT_00300702": {
+        "CLASSSTRUCTUREID": "31594",
+        "COMMODITY": "0230302",
+        "COMMODITYGROUP": "02303",
+        "DESCRIPTION": "Gestão de Pessoas,Administração de Pessoal,Esclarecimento sobre emissão de crachás",
+    },
+    "SNC_INT_00300701": {
+        "CLASSSTRUCTUREID": "31593",
+        "COMMODITY": "0230301",
+        "COMMODITYGROUP": "02303",
+        "DESCRIPTION": "Gestão de pessoas, Administração de Pessoal, Ajuste de dados no Rhevolution para Pessoa Física",
+    },
+    "SNC_INT_00301001": {
+        "CLASSSTRUCTUREID": "31596",
+        "COMMODITY": "0230304",
+        "COMMODITYGROUP": "02303",
+        "DESCRIPTION": "Gestão de Pessoas,Consulta Jurídica,Consulta jurídica para contratações de prestadores de serviço carta convite - Pessoa Física/Jurídica",
+    },
+    "SNC_INT_003011": {
+        "CLASSSTRUCTUREID": "31598",
+        "COMMODITY": "0230306",
+        "COMMODITYGROUP": "02303",
+        "DESCRIPTION": "Gestão de pessoas,Dúvidas sobre prestadores de serviço carta convite PF e PJ",
+    },
+    "SNC_INT_003012": {
+        "CLASSSTRUCTUREID": "31597",
+        "COMMODITY": "0230305",
+        "COMMODITYGROUP": "02303",
+    },
+    "SNC_INT_003012001": {
+        "CLASSSTRUCTUREID": "31597",
+        "COMMODITY": "0230305",
+        "COMMODITYGROUP": "02303",
+    },
+    "SNC-15003001": {
+        "CLASSSTRUCTUREID": "31261",
+        "COMMODITY": "015004",
+        "COMMODITYGROUP": "015",
+        "DESCRIPTION": "Gestão da Tecnologia,Suporte para Sistemas,Relatar um erro,Relatar um erro",
+    },
+    "SNC-150121001": {
+        "CLASSSTRUCTUREID": "32535",
+        "COMMODITY": "150_1111",
+        "COMMODITYGROUP": "150_111",
+        "DESCRIPTION": "Relatar um erro no Ponto Web (Aplicação)",
+    },
+}
+
+
+def resolve_fixed_description(tipo: str, *, tema: str = "", subtema: str = "") -> str:
+    """Resolve a DESCRIPTION hierárquica exata do Catálogo de Serviços do Maximo."""
+    if tipo == "Benefícios Cooperativa" or (tipo == "Benefícios" and subtema):
+        return (
+            "Gestão de Pessoas,Assist. Médica / Auxílio Educ. Infantil / Presente casamento / "
+            f"Cooperativa / Consignado Santander,Esclareça suas dúvidas sobre estes temas,Cooperativa,{subtema}"
+        )
+    if tipo == "Benefícios":
+        return (
+            "Gestão de Pessoas,Assist. Médica / Auxílio Educ. Infantil / Presente casamento / "
+            f"Cooperativa / Consignado Santander,Esclareça suas dúvidas sobre estes temas,{tema}"
+        )
+    if tipo in GEP_FIXED_DESCRIPTIONS:
+        return GEP_FIXED_DESCRIPTIONS[tipo]
+    return f"Gestão de Pessoas - {tipo}"
+
+
+def resolve_gep_ticket_specs(
+    tipo: str,
+    info: dict[str, str],
+    *,
+    tema: str = "",
+    subtema: str = "",
+) -> list[dict[str, str]]:
+    """Gera a lista de TICKETSPECS estruturada de acordo com o padrão do Maximo."""
+    if tipo == "Crachás":
+        return []
+    if tipo == "Ponto eletrônico":
+        return [{"ASSETATTRID": "SNC-1500300101", "TABLEVALUE": "Ponto Web (Aplicação)"}]
+    if tipo in ("Benefícios", "Benefícios Cooperativa"):
+        cpf = info.get("cpf") or ""
+        if subtema or tipo == "Benefícios Cooperativa":
+            return [
+                {"ASSETATTRID": "SNC_INT_0030120106", "ALNVALUE": tema},
+                {"ASSETATTRID": "SNC_INT_0030120107", "ALNVALUE": subtema},
+                {"ASSETATTRID": "SNC_INT_0030120108", "ALNVALUE": cpf},
+            ]
+        return [
+            {"ASSETATTRID": "SNC_INT_0030120106", "ALNVALUE": tema},
+            {"ASSETATTRID": "SNC_INT_0030120107", "ALNVALUE": ""},
+            {"ASSETATTRID": "SNC_INT_0030120108", "ALNVALUE": cpf},
+        ]
+    if tipo in ("Consulta Juridica", "Consulta juridica"):
+        return [
+            {"ASSETATTRID": "SNC_INT_0030100101", "ALNVALUE": info.get("nome") or ""},
+            {"ASSETATTRID": "SNC_INT_0030100102", "ALNVALUE": info.get("cpf") or ""},
+            {"ASSETATTRID": "SNC_INT_0030100103", "ALNVALUE": info.get("data_nascimento") or ""},
+            {"ASSETATTRID": "SNC_INT_0030100104", "ALNVALUE": info.get("pis") or ""},
+        ]
+    if tipo == "Dúvidas gerais":
+        return [{"ASSETATTRID": "SNC_INT_0030110101", "ALNVALUE": tema}]
+    if tipo == "RPA - Consulta PF":
+        return [
+            {"ASSETATTRID": "SNC-1500300101", "TABLEVALUE": "RPA (Robotic Process Automation)"},
+            {"ASSETATTRID": "SNC-1500300131", "TABLEVALUE": "RPA_GEP SB21GEP03301 - Consulta PF - Sprint 1 e 2"},
+        ]
+    return []
+
+
+def pessoa_body(
+    info: dict[str, str],
+    *,
+    tipo: str,
+    classification: str,
+    texto: str,
+    tema: str,
+    subtema: str = "",
+    description: str | None = None,
+    ticketspecs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     nome = info.get("nome") or ""
     email = info.get("email") or ""
     unidade = info.get("unidade") or ""
@@ -84,7 +218,20 @@ def pessoa_body(info: dict[str, str], *, tipo: str, classification: str, texto: 
     if subtema:
         long_desc += f" | Subtema: {subtema}"
     long_desc += f"\nDescrição: {texto}"
-    return {
+
+    final_desc = description or resolve_fixed_description(tipo, tema=tema, subtema=subtema)
+    final_specs = (
+        ticketspecs
+        if ticketspecs is not None
+        else resolve_gep_ticket_specs(tipo, info, tema=tema, subtema=subtema)
+    )
+
+    known_meta = ICD_KNOWN_METADATA.get(classification, {})
+    class_structure_id = known_meta.get("CLASSSTRUCTUREID", "")
+    commodity = known_meta.get("COMMODITY", "")
+    commodity_group = known_meta.get("COMMODITYGROUP", "")
+
+    body = {
         "area": "gep",
         "nome": nome,
         "email": email,
@@ -93,9 +240,12 @@ def pessoa_body(info: dict[str, str], *, tipo: str, classification: str, texto: 
         "tipo_chamado": tipo,
         "classificationId": classification,
         "CLASSIFICATIONID": classification,
-        "classStructureId": "",
-        "commodity": "",
-        "commodityGroup": "",
+        "classStructureId": class_structure_id,
+        "CLASSSTRUCTUREID": class_structure_id,
+        "commodity": commodity,
+        "COMMODITY": commodity,
+        "commodityGroup": commodity_group,
+        "COMMODITYGROUP": commodity_group,
         "texto": texto,
         "tema": tema,
         "subtema": subtema,
@@ -104,12 +254,15 @@ def pessoa_body(info: dict[str, str], *, tipo: str, classification: str, texto: 
         "REPORTEDEMAIL": email,
         "AFFECTEDEMAIL": email,
         "LOCATION": unidade,
-        "DESCRIPTION": f"Gestão de Pessoas - {tipo}",
+        "DESCRIPTION": final_desc,
         "DESCRIPTION_LONGDESCRIPTION": long_desc,
         "dataNascimento": info.get("data_nascimento") or "",
         "pisPasepNit": info.get("pis") or "",
         "anexo": "",
     }
+    if final_specs:
+        body["TICKETSPECS"] = final_specs
+    return body
 
 
 def geral_body(

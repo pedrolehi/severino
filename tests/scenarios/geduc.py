@@ -30,7 +30,7 @@ GEDUC_SCENARIOS: list[Scenario] = [
                 ),
             ),
             Turn(
-                input_text="Solicitação de portaria para novo diretor da unidade escolar Lapa Tito.",
+                input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Solicitação de portaria para novo diretor da unidade escolar Lapa Tito.",
                 description="Preenchimento do detalhe da solicitação",
                 expected=TurnExpected(
                     active_flow="geduc_abertura_chamado",
@@ -43,7 +43,7 @@ GEDUC_SCENARIOS: list[Scenario] = [
                 description="Dispensa envio de arquivo",
                 expected=TurnExpected(
                     is_done=True,
-                    text_contains_any=["protocolo", "temporariamente indisponível", "não abri o chamado"],
+                    text_contains=["protocolo"],
                 ),
             ),
         ],

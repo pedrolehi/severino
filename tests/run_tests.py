@@ -53,9 +53,35 @@ def parse_args() -> argparse.Namespace:
         help="Executa apenas um cenário específico por ID (ex: gep_saldo_de_horas)",
     )
     parser.add_argument(
+        "--prod",
+        action="store_true",
+        help="Executa contra o cluster de PRODUÇÃO do senac-orchestrate",
+    )
+    parser.add_argument(
+        "--audit-icd",
+        action="store_true",
+        help="Dispara automaticamente o robô Playwright ao final para auditar enfileiramento (10m) e excluir os chamados de teste",
+    )
+    parser.add_argument(
+        "--headed",
+        action="store_true",
+        help="Executa o robô Playwright com navegador visível na tela (padrão é headless)",
+    )
+    parser.add_argument(
+        "--queue-timeout",
+        type=int,
+        default=600,
+        help="Tempo máximo de espera pelo enfileiramento em segundos no ICD (padrão: 600 / 10 minutos)",
+    )
+    parser.add_argument(
         "--mock",
         action="store_true",
         help="Força uso do MockOrchestrateClient (não faz chamadas HTTP para o senac-orchestrate)",
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Limpa relatórios e screenshots de execuções anteriores antes de iniciar os testes",
     )
     parser.add_argument(
         "--list",
@@ -67,6 +93,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+
+    # Limpeza prévia de relatórios se solicitado
+    if args.clean:
+        from scripts.clean_reports import clean
+        clean()
 
     # Exportação de dataset
     if args.export_dataset:
@@ -97,7 +128,13 @@ def main() -> int:
         return 0
 
     # Configuração de mock vs backend real
-    orchestrate_url = os.getenv("SENAC_ORCHESTRATE_URL", "").strip()
+    prod_orchestrate_url = "https://prod-senac-orquestrator-chatbotx.ocp-senac-11f45abbd458185944dd806416f75c34-0000.us-south.containers.appdomain.cloud/v2"
+    if args.prod:
+        os.environ["SENAC_ORCHESTRATE_URL"] = prod_orchestrate_url
+        orchestrate_url = prod_orchestrate_url
+    else:
+        orchestrate_url = os.getenv("SENAC_ORCHESTRATE_URL", "").strip()
+
     if args.mock:
         os.environ["ORCHESTRATE_USE_MOCK"] = "true"
         print("🔧 Modo Mock ATIVADO manualmente via --mock.")
@@ -107,8 +144,16 @@ def main() -> int:
             print("❌ Erro: SENAC_ORCHESTRATE_URL não configurada no .env.")
             print("Para rodar contra homologação, configure SENAC_ORCHESTRATE_URL. Para testes locais offline, use '--mock'.")
             return 1
-        print(f"🌐 Backend senac-orchestrate REAL conectado em: {orchestrate_url}")
-        print("⚡ Execução 100% real: chamadas serão enviadas ao cluster de homologação e ao ICD (IBM Control Desk).")
+
+        if args.prod:
+            print("=" * 70)
+            print("🚨 [ATENÇÃO: MODO PRODUÇÃO ATIVADO]")
+            print(f"🌐 Backend senac-orchestrate PROD: {orchestrate_url}")
+            print("⚡ Os chamados serão abertos no ambiente REAL de PRODUÇÃO do ICD!")
+            print("=" * 70)
+        else:
+            print(f"🌐 Backend senac-orchestrate REAL conectado em: {orchestrate_url}")
+            print("⚡ Execução 100% real: chamadas serão enviadas ao cluster de homologação e ao ICD (IBM Control Desk).")
 
     scenarios_to_run = active_scenarios
     if args.scenario:
@@ -155,11 +200,36 @@ def main() -> int:
 
     tickets = reporter.all_tickets
     if tickets:
-        print("\n⚠️ CHAMADOS ABERTOS NO ICD (REMOVER MANUALMENTE):")
-        print("=" * 60)
-        for t in tickets:
-            print(f" • Protocolo: {t.ticket_id} | Fluxo: {t.flow_name} | Assunto: {t.subject}")
-        print("=" * 60)
+        if args.audit_icd:
+            print("\n" + "=" * 70)
+            print("🤖 [AUTOMAÇÃO ICD ATIVADA via --audit-icd]")
+            print(f"Disparando auditoria de enfileiramento e exclusão para {len(tickets)} chamado(s)...")
+            print("=" * 70)
+            from scripts.icd_cleaner_robot import ICDAuditAndCleanerRobot, TicketTarget
+            targets = [
+                TicketTarget(
+                    ticket_id=t.ticket_id,
+                    flow_name=t.flow_name,
+                    subject=t.subject,
+                    user_name=t.user_name,
+                    chapa=t.chapa,
+                )
+                for t in tickets
+            ]
+            robot = ICDAuditAndCleanerRobot(
+                headless=not args.headed,
+                queue_timeout_s=args.queue_timeout,
+            )
+            robot.run(targets)
+        else:
+            print("\n⚠️ CHAMADOS ABERTOS NO ICD:")
+            print("=" * 60)
+            for t in tickets:
+                print(f" • Protocolo: {t.ticket_id} | Fluxo: {t.flow_name} | Assunto: {t.subject}")
+            print("=" * 60)
+            print("💡 DICA: Para auditar o enfileiramento e excluir automaticamente:")
+            print("   python scripts/icd_cleaner_robot.py --latest --headed")
+            print("   Ou adicione a flag '--audit-icd' ao rodar os testes.")
 
     print(f"\n📄 Relatório Markdown salvo em: {md_path}")
     print(f"📄 Relatório JSON salvo em: {json_path}\n")

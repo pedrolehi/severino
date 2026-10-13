@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Auditoria e Enfileiramento ICD | Senac</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #0284c7;
+      --primary-light: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      padding: 2rem 1.5rem;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .title-group h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .title-group p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .badge-env {
+      background: rgba(2, 132, 199, 0.2);
+      color: var(--primary-light);
+      padding: 0.35rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: transform 0.2s;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+    }
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .metric-card.success .metric-value { color: var(--success); }
+    .metric-card.warning .metric-value { color: var(--warning); }
+    .metric-card.danger .metric-value { color: var(--danger); }
+    
+    .alert-banner {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .alert-banner.hide {
+      display: none;
+    }
+    .alert-icon {
+      font-size: 1.8rem;
+    }
+    .alert-content h3 {
+      color: #fca5a5;
+      font-size: 1.1rem;
+      margin-bottom: 0.35rem;
+    }
+    .alert-content p {
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tickets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .ticket-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .ticket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 1rem;
+    }
+    .ticket-id-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .ticket-id {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .ticket-id:hover {
+      color: var(--primary-light);
+      text-decoration: underline;
+    }
+    .ticket-subject {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+    }
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .badge-status.success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .badge-status.warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .badge-status.danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    
+    .ticket-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      background: rgba(15, 23, 42, 0.4);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .detail-val {
+      font-size: 0.95rem;
+      color: #f1f5f9;
+      font-weight: 500;
+    }
+    
+    .evidence-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .evidence-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .gallery-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .gallery-item:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-2px);
+    }
+    .gallery-thumb {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+      background: #020617;
+    }
+    .gallery-caption {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+    }
+    .gallery-badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    /* Lightbox Modal */
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.88);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 2rem;
+    }
+    .lightbox.active {
+      display: flex;
+    }
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    .lightbox-img {
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+    .lightbox-title {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      font-size: 2.2rem;
+      color: #fff;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>📊 Auditoria e Enfileiramento no ICD (Senac)</h1>
+        <p>Relatório de validação de roteamento de chamados e exclusão de teste</p>
+      </div>
+      <div>
+        <span class="badge-env">Gerado em: 13/10/2026 17:55:46</span>
+      </div>
+    </header>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Total de Chamados</span>
+        <span class="metric-value">4</span>
+      </div>
+      <div class="metric-card success">
+        <span class="metric-label">Enfileirados no Grupo</span>
+        <span class="metric-value">4</span>
+      </div>
+      <div class="metric-card warning">
+        <span class="metric-label">Não Enfileirados (4m)</span>
+        <span class="metric-value">0</span>
+      </div>
+      <div class="metric-card success">
+        <span class="metric-label">Excluídos (Teste)</span>
+        <span class="metric-value">4</span>
+      </div>
+      <div class="metric-card ">
+        <span class="metric-label">Ação Manual Requerida</span>
+        <span class="metric-value">0</span>
+      </div>
+    </div>
+
+    <!-- Banner de Alerta para chamados pendentes -->
+    <div class="alert-banner hide">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <h3>Intervenção Manual Necessária no ICD</h3>
+        <p>0 chamado(s) falharam na reclassificação automática após 3 tentativas. Utilize os links diretos abaixo para excluí-los manualmente.</p>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>📋 Detalhamento dos Chamados Auditados</span>
+    </div>
+
+    <div class="tickets-list">
+
+      <div class="ticket-card">
+        <div class="ticket-header">
+          <div class="ticket-id-group">
+            <div>
+              <a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614352" target="_blank" class="ticket-id" title="Abrir solicitação no Maximo">
+                #6614352 ↗
+              </a>
+              <div class="ticket-subject">GEP - Abertura de Chamado de Crachás</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge-status success">✓ Enfileirado (0s)</span>
+            <span class="badge-status success">✓ Excluído (Chamado Teste)</span>
+          </div>
+        </div>
+
+        <div class="ticket-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Grupo de Atendimento</span>
+            <span class="detail-val">clientAreaId = "mbd5bb736-ca";</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tempo até Enfileirar</span>
+            <span class="detail-val">0s</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fluxo do Assistente</span>
+            <span class="detail-val">gep_abertura_chamado_crachas</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tentativas de Exclusão</span>
+            <span class="detail-val">1 de 3</span>
+          </div>
+        </div>
+
+        <div class="evidence-section">
+          <span class="evidence-title">📸 Evidências Visuais (Clique para ampliar):</span>
+          <div class="gallery-grid">
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614352_1_abertura_20261013_175452.png" alt="Tela inicial do chamado (Antes de reclassificar)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Tela inicial do chamado (Antes de reclassificar)</span>
+                    <span class="gallery-badge">1. Abertura</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614352_2_enfileiramento_20261013_175452.png" alt="Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)</span>
+                    <span class="gallery-badge">2. Enfileirado</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614352_3_exclusao_20261013_175452.png" alt="Reclassificado como &#x27;Excluir chamado teste&#x27;" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Reclassificado como &#x27;Excluir chamado teste&#x27;</span>
+                    <span class="gallery-badge">3. Exclusão</span>
+                  </div>
+                </div>
+                </div>
+        </div>
+      </div>
+
+      <div class="ticket-card">
+        <div class="ticket-header">
+          <div class="ticket-id-group">
+            <div>
+              <a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614354" target="_blank" class="ticket-id" title="Abrir solicitação no Maximo">
+                #6614354 ↗
+              </a>
+              <div class="ticket-subject">GEP - Abertura de Chamado de Benefícios</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge-status success">✓ Enfileirado (0s)</span>
+            <span class="badge-status success">✓ Excluído (Chamado Teste)</span>
+          </div>
+        </div>
+
+        <div class="ticket-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Grupo de Atendimento</span>
+            <span class="detail-val">clientAreaId = "mbd5bb736-ca";</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tempo até Enfileirar</span>
+            <span class="detail-val">0s</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fluxo do Assistente</span>
+            <span class="detail-val">gep_abertura_chamado_beneficios</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tentativas de Exclusão</span>
+            <span class="detail-val">1 de 3</span>
+          </div>
+        </div>
+
+        <div class="evidence-section">
+          <span class="evidence-title">📸 Evidências Visuais (Clique para ampliar):</span>
+          <div class="gallery-grid">
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614354_1_abertura_20261013_175505.png" alt="Tela inicial do chamado (Antes de reclassificar)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Tela inicial do chamado (Antes de reclassificar)</span>
+                    <span class="gallery-badge">1. Abertura</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614354_2_enfileiramento_20261013_175505.png" alt="Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)</span>
+                    <span class="gallery-badge">2. Enfileirado</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614354_3_exclusao_20261013_175505.png" alt="Reclassificado como &#x27;Excluir chamado teste&#x27;" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Reclassificado como &#x27;Excluir chamado teste&#x27;</span>
+                    <span class="gallery-badge">3. Exclusão</span>
+                  </div>
+                </div>
+                </div>
+        </div>
+      </div>
+
+      <div class="ticket-card">
+        <div class="ticket-header">
+          <div class="ticket-id-group">
+            <div>
+              <a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614359" target="_blank" class="ticket-id" title="Abrir solicitação no Maximo">
+                #6614359 ↗
+              </a>
+              <div class="ticket-subject">GEF - Relatórios Orçamentários</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge-status success">✓ Enfileirado (0s)</span>
+            <span class="badge-status success">✓ Excluído (Chamado Teste)</span>
+          </div>
+        </div>
+
+        <div class="ticket-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Grupo de Atendimento</span>
+            <span class="detail-val">clientAreaId = "mbd5bb736-ca";</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tempo até Enfileirar</span>
+            <span class="detail-val">0s</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fluxo do Assistente</span>
+            <span class="detail-val">gef_relatorios_orcamentarios</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tentativas de Exclusão</span>
+            <span class="detail-val">1 de 3</span>
+          </div>
+        </div>
+
+        <div class="evidence-section">
+          <span class="evidence-title">📸 Evidências Visuais (Clique para ampliar):</span>
+          <div class="gallery-grid">
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614359_1_abertura_20261013_175518.png" alt="Tela inicial do chamado (Antes de reclassificar)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Tela inicial do chamado (Antes de reclassificar)</span>
+                    <span class="gallery-badge">1. Abertura</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614359_2_enfileiramento_20261013_175518.png" alt="Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)</span>
+                    <span class="gallery-badge">2. Enfileirado</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614359_3_exclusao_20261013_175518.png" alt="Reclassificado como &#x27;Excluir chamado teste&#x27;" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Reclassificado como &#x27;Excluir chamado teste&#x27;</span>
+                    <span class="gallery-badge">3. Exclusão</span>
+                  </div>
+                </div>
+                </div>
+        </div>
+      </div>
+
+      <div class="ticket-card">
+        <div class="ticket-header">
+          <div class="ticket-id-group">
+            <div>
+              <a href="https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid=6614361" target="_blank" class="ticket-id" title="Abrir solicitação no Maximo">
+                #6614361 ↗
+              </a>
+              <div class="ticket-subject">GEF - Gestão de Pagamentos</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge-status success">✓ Enfileirado (0s)</span>
+            <span class="badge-status success">✓ Excluído (Chamado Teste)</span>
+          </div>
+        </div>
+
+        <div class="ticket-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Grupo de Atendimento</span>
+            <span class="detail-val">clientAreaId = "mbd5bb736-ca";</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tempo até Enfileirar</span>
+            <span class="detail-val">0s</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fluxo do Assistente</span>
+            <span class="detail-val">gef_gestao_pagamentos</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tentativas de Exclusão</span>
+            <span class="detail-val">1 de 3</span>
+          </div>
+        </div>
+
+        <div class="evidence-section">
+          <span class="evidence-title">📸 Evidências Visuais (Clique para ampliar):</span>
+          <div class="gallery-grid">
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614361_1_abertura_20261013_175532.png" alt="Tela inicial do chamado (Antes de reclassificar)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Tela inicial do chamado (Antes de reclassificar)</span>
+                    <span class="gallery-badge">1. Abertura</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614361_2_enfileiramento_20261013_175532.png" alt="Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Enfileirado no grupo: clientAreaId = &quot;mbd5bb736-ca&quot;; (0s)</span>
+                    <span class="gallery-badge">2. Enfileirado</span>
+                  </div>
+                </div>
+                
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="screenshots/ticket_6614361_3_exclusao_20261013_175532.png" alt="Reclassificado como &#x27;Excluir chamado teste&#x27;" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>Reclassificado como &#x27;Excluir chamado teste&#x27;</span>
+                    <span class="gallery-badge">3. Exclusão</span>
+                  </div>
+                </div>
+                </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>
+      <p>Robô de Auditoria e Enfileiramento IBM Control Desk (ICD) • Assistente Virtual Senac SP</p>
+      <p style="margin-top: 0.25rem;">Política de retenção ativa: mantendo os 10 relatórios mais recentes em reports/</p>
+    </footer>
+  </div>
+
+  <!-- Modal Lightbox -->
+  <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+    <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <div class="lightbox-content">
+      <img id="lightbox-img" class="lightbox-img" src="" alt="Zoom Evidência">
+      <div id="lightbox-title" class="lightbox-title"></div>
+    </div>
+  </div>
+
+  <script>
+    function openLightbox(target, fallbackTitle) {
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxTitle = document.getElementById('lightbox-title');
+      if (typeof target === 'string') {
+        lightboxImg.src = target.replace(/\/g, '/');
+        lightboxTitle.innerText = fallbackTitle || '';
+      } else if (target && target.querySelector) {
+        const img = target.querySelector('img');
+        if (img) {
+          lightboxImg.src = img.currentSrc || img.src || img.getAttribute('src');
+          lightboxTitle.innerText = img.getAttribute('alt') || fallbackTitle || '';
+        }
+      }
+      document.getElementById('lightbox').classList.add('active');
+    }
+    function closeLightbox(e) {
+      if (!e || e.target.id === 'lightbox' || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('active');
+      }
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLightbox();
+    });
+  </script>
+</body>
+</html>

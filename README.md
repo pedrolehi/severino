@@ -172,6 +172,151 @@ from-scratch-multiagent/
 
 ---
 
+## Testes Automatizados E2E & Auditoria ICD
+
+O repositório conta com um ecossistema completo de testes conversacionais multi-turno (Runner) integrado a um robô de automação visual (Playwright) para auditoria e cancelamento automático de chamados no IBM Control Desk (Maximo/ICD).
+
+### 🚀 1. Como Rodar os Testes
+
+#### Pré-requisitos dos testes:
+Instalar navegadores do Playwright caso ainda não tenha feito:
+```powershell
+playwright install chromium
+```
+
+#### Rodando um cenário específico (Ex: Crachás com auditoria ICD):
+```powershell
+# Em Homologação (senac-orchestrate HML)
+python tests/run_tests.py --scenario gep_abertura_chamado_crachas --clean --audit-icd --headed
+
+# Em Produção (com abertura e auditoria real no ICD)
+python tests/run_tests.py --prod --dataset tests/fixtures/real_test_scenarios.json --scenario gep_abertura_chamado_crachas --clean --audit-icd --headed
+```
+
+#### Rodando a bateria completa de cenários (15 fluxos):
+```powershell
+python tests/run_tests.py --prod --dataset tests/fixtures/real_test_scenarios.json --clean --audit-icd --headed
+```
+
+#### Opções e Flags do Runner (`tests/run_tests.py`):
+| Flag | Descrição |
+|---|---|
+| `--prod` | Direciona requisições ao backend de **Produção** do senac-orchestrate (abertura real no ICD). |
+| `--dataset <caminho>` | Carrega bateria de testes a partir de fixture JSON (ex: `tests/fixtures/real_test_scenarios.json`). |
+| `--scenario <id>` | Executa apenas um cenário específico pelo seu ID (ex: `gep_abertura_chamado_crachas`). |
+| `--clean` | Limpa relatórios anteriores e screenshots em `reports/` antes de iniciar a rodada. |
+| `--audit-icd` | Dispara o robô Playwright ao final para auditar enfileiramento e excluir os chamados de teste. |
+| `--headed` | Exibe a janela gráfica do navegador durante a auditoria (padrão é headless em segundo plano). |
+| `--queue-timeout <seg>` | Tempo máximo em segundos esperando o roteamento no ICD (padrão: 600s / 10 minutos). |
+| `--mock` | Força respostas mockadas sem disparar chamadas HTTP externas. |
+| `--list` | Lista todos os cenários disponíveis no repositório. |
+
+#### Limpeza de relatórios avulsa:
+```powershell
+python scripts/clean_reports.py
+```
+
+---
+
+### 👤 2. Perfis de Usuário & Massa de Dados (`tests/test_mass.py`)
+
+O assistente utiliza injeção automática de contexto de colaborador (`user_info`), separando perfis por tipo de chamado:
+
+* **Perfil Geral / Administrativo (Padrão: Pedro Muniz):**
+  * Utilizado para todos os chamados que **não** requerem privilégios orçamentários/financeiros (Crachás, Ponto Eletrônico, Benefícios, Carta Convite, GCR, GEDUC).
+  * `NOME`: `PEDRO LEHI RODRIGUES MUNIZ`
+  * `EMAIL`: `pedro.lrmuniz@sp.senac.br`
+  * `UNIDADE`: `CAS`
+  * `acessoTotal`: `False`
+* **Perfil Financeiro / Acesso Total (Flavio Carvalho Machado):**
+  * Reservado estritamente para fluxos do GEF (Centro de Custo, Relatórios Financeiros/Orçamentários).
+  * `NOME`: `FLAVIO CARVALHO MACHADO`
+  * `EMAIL`: `flavio.cmachado@sp.senac.br`
+  * `acessoTotal`: `True`
+* **Sobrescrita via `.env`:**
+  * Você pode customizar os dados de Pedro ou Flavio definindo:
+    `PEDRO_CHAPA`, `PEDRO_CPF`, `PEDRO_NOME`, `PEDRO_EMAIL`, `TEST_USER_CHAPA`, `TEST_USER_CPF`, etc.
+
+---
+
+### ✍️ 3. Como Criar Novos Cenários de Teste
+
+Os cenários são modulares e ficam organizados em `tests/scenarios/` divididos por diretoria:
+* `gep.py` — Gestão de Pessoas (RH: ponto, crachás, benefícios, saldo de horas)
+* `gef.py` — Gestão Financeira (notas fiscais, centro de custo, cancelamento)
+* `geduc.py` — Gestão Educacional (concluintes SEE/SP)
+* `gcr.py` — Gestão de Clientes e Relacionamento
+
+#### Exemplo: Criando um novo cenário conversacional
+
+Em `tests/scenarios/<modulo>.py`:
+
+```python
+from tests.scenarios.base import Scenario, Turn, TurnExpected
+
+NOVO_CENARIO = Scenario(
+    id="gep_abertura_chamado_exemplo",
+    name="GEP - Abertura de Chamado Exemplo",
+    flow_name="gep_abertura_chamado_exemplo",
+    metadata={
+        # Opcional: define se precisa de acesso financeiro total (Flavio) ou padrão (Pedro)
+        "require_acesso_total": False,
+        # Opcional: parâmetros customizados de negócio
+        "business_params": {
+            "motivo": "Teste",
+        },
+    },
+    turns=[
+        Turn(
+            input_text="Preciso abrir chamado de teste",
+            description="Turno 1: Disparo inicial do fluxo",
+            expected=TurnExpected(
+                active_flow="gep_abertura_chamado_exemplo",
+                flow_step="detalhe",
+                has_ui=True,
+            ),
+        ),
+        Turn(
+            input_text="[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Descrição detalhada.",
+            description="Turno 2: Preenchimento de texto",
+            expected=TurnExpected(
+                active_flow="gep_abertura_chamado_exemplo",
+                flow_step="ask_anexo",
+            ),
+        ),
+        Turn(
+            input_text="Não",
+            description="Turno 3: Dispensa envio de anexo e finaliza",
+            expected=TurnExpected(
+                is_done=True,
+                text_contains=["protocolo"],  # Valida que gerou protocolo real
+            ),
+        ),
+    ],
+)
+```
+
+#### Dicas importantes ao criar testes:
+1. **Aviso de Teste:** Sempre utilize o prefixo `[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR]` nos campos de descrição/detalhe de chamados abertos em produção.
+2. **Validação de Protocolo:** Para chamados que abrem ticket no ICD, use `is_done=True` e `text_contains=["protocolo"]`. O runner extrairá o número do protocolo automaticamente para que o robô possa auditá-lo e excluí-lo.
+3. **Exportar fixtures JSON:**
+   ```powershell
+   python tests/run_tests.py --export-dataset tests/fixtures/real_test_scenarios.json
+   ```
+
+---
+
+### 🤖 4. Auditoria e Exclusão no Maximo/ICD (`scripts/icd_cleaner_robot.py`)
+
+Quando ativado via `--audit-icd` (ou executado diretamente):
+1. **Login Automático:** Autentica no portal IAM do Senac (`suporte.sp.senac.br/maximo`) com as credenciais `ICD_USERNAME` e `ICD_PASSWORD`.
+2. **Monitoramento de Enfileiramento:** Abre o chamado e aguarda até 10 minutos verificando o preenchimento de `Grupo de Atendimento` (ex: `GEP - Crachás`).
+3. **Captura de Evidências:** Registra prints em alta resolução em `reports/screenshots/` (Abertura, Enfileiramento, Exclusão).
+4. **Reclassificação para Exclusão:** Altera a classificação para `"Excluir chamado teste"` e salva no Maximo com descarte de telas pendentes.
+5. **Relatório HTML com Lightbox:** Gera relatório com métricas visuais em `reports/icd_audit_<data>.html`, com modal de zoom e links diretos para cada chamado no ICD.
+
+---
+
 ## Docs internas
 
 - `DEPLOY_OPENSHIFT.md` — guia de deploy, CI/CD (GitHub Actions), OpenShift e secrets

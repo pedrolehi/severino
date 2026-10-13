@@ -1,0 +1,646 @@
+"""Gerador de Relatórios HTML Modernos para Auditoria e Enfileiramento no ICD (Maximo).
+
+Recursos:
+- Interface moderna, responsiva e independente de conexão externa (CSS e JS embarcados)
+- Cards informativos com badges de status (Enfileirado / Não Enfileirado / Excluído / Manual)
+- Galeria de evidências com Modal Lightbox interativo (zoom das imagens)
+- Links diretos clicáveis para cada chamado no IBM Control Desk
+- Política de retenção automática: mantém estritamente os 10 últimos relatórios e remove os antigos
+"""
+
+from __future__ import annotations
+
+import html
+import json
+import os
+import shutil
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+
+def prune_old_reports(reports_dir: Path, keep: int = 10) -> list[Path]:
+    """Mantém apenas os 'keep' relatórios mais recentes de cada tipo e remove os mais antigos."""
+    deleted_files: list[Path] = []
+    
+    # 1. Limpeza de relatórios HTML de auditoria do ICD
+    html_files = sorted(reports_dir.glob("icd_audit_*.html"), key=os.path.getmtime, reverse=True)
+    for old_file in html_files[keep:]:
+        try:
+            old_file.unlink()
+            deleted_files.append(old_file)
+        except Exception:
+            pass
+
+    # 2. Limpeza de relatórios JSON de auditoria do ICD
+    json_files = sorted(reports_dir.glob("icd_cleanup_*.json"), key=os.path.getmtime, reverse=True)
+    for old_file in json_files[keep:]:
+        try:
+            old_file.unlink()
+            deleted_files.append(old_file)
+        except Exception:
+            pass
+
+    # 3. Limpeza de screenshots órfãos mais antigos que não pertencem aos relatórios mantidos
+    # Coleta todas as imagens referenciadas nos relatórios HTML sobreviventes
+    surviving_images: set[str] = set()
+    surviving_htmls = sorted(reports_dir.glob("icd_audit_*.html"), key=os.path.getmtime, reverse=True)[:keep]
+    for h in surviving_htmls:
+        try:
+            text = h.read_text(encoding="utf-8")
+            for line in text.splitlines():
+                if "screenshots/" in line:
+                    import re
+                    matches = re.findall(r'screenshots/[^"\']+', line)
+                    for m in matches:
+                        surviving_images.add(Path(m).name)
+        except Exception:
+            pass
+
+    screenshots_dir = reports_dir / "screenshots"
+    if screenshots_dir.is_dir() and surviving_images:
+        all_shots = sorted(screenshots_dir.glob("*.png"), key=os.path.getmtime, reverse=True)
+        # Mantém até 60 screenshots mais recentes no mínimo, e apaga os que não estão nos relatórios ativos
+        for shot in all_shots[60:]:
+            if shot.name not in surviving_images:
+                try:
+                    shot.unlink()
+                    deleted_files.append(shot)
+                except Exception:
+                    pass
+
+    return deleted_files
+
+
+def generate_html_report(
+    report_data: dict[str, Any],
+    output_path: Path,
+    keep_history: int = 10,
+) -> Path:
+    """Gera o arquivo HTML formatado e executa a política de retenção."""
+    reports_dir = output_path.parent
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp_str = report_data.get("timestamp_str") or datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    total = report_data.get("total", 0)
+    enfileirados = report_data.get("enfileirados_count", 0)
+    nao_enfileirados = report_data.get("nao_enfileirados_count", 0)
+    excluidos_sucesso = report_data.get("excluidos_count", 0)
+    manuais = report_data.get("manual_count", 0)
+    items = report_data.get("items", [])
+
+    # HTML Template com CSS Vanilla embutido
+    html_content = f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Auditoria e Enfileiramento ICD | Senac</title>
+  <style>
+    :root {{
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #0284c7;
+      --primary-light: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+    }}
+    * {{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }}
+    body {{
+      background: var(--bg-main);
+      color: var(--text-main);
+      padding: 2rem 1.5rem;
+      line-height: 1.5;
+    }}
+    .container {{
+      max-width: 1280px;
+      margin: 0 auto;
+    }}
+    header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }}
+    .title-group h1 {{
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }}
+    .title-group p {{
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }}
+    .badge-env {{
+      background: rgba(2, 132, 199, 0.2);
+      color: var(--primary-light);
+      padding: 0.35rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }}
+    .metrics-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }}
+    .metric-card {{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: transform 0.2s;
+    }}
+    .metric-card:hover {{
+      transform: translateY(-2px);
+    }}
+    .metric-label {{
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }}
+    .metric-value {{
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+    }}
+    .metric-card.success .metric-value {{ color: var(--success); }}
+    .metric-card.warning .metric-value {{ color: var(--warning); }}
+    .metric-card.danger .metric-value {{ color: var(--danger); }}
+    
+    .alert-banner {{
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }}
+    .alert-banner.hide {{
+      display: none;
+    }}
+    .alert-icon {{
+      font-size: 1.8rem;
+    }}
+    .alert-content h3 {{
+      color: #fca5a5;
+      font-size: 1.1rem;
+      margin-bottom: 0.35rem;
+    }}
+    .alert-content p {{
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }}
+
+    .section-title {{
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }}
+    .tickets-list {{
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }}
+    .ticket-card {{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }}
+    .ticket-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 1rem;
+    }}
+    .ticket-id-group {{
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }}
+    .ticket-id {{
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }}
+    .ticket-id:hover {{
+      color: var(--primary-light);
+      text-decoration: underline;
+    }}
+    .ticket-subject {{
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+    }}
+    .badge-status {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }}
+    .badge-status.success {{
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }}
+    .badge-status.warning {{
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }}
+    .badge-status.danger {{
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }}
+    
+    .ticket-details-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      background: rgba(15, 23, 42, 0.4);
+      padding: 1rem;
+      border-radius: 8px;
+    }}
+    .detail-item {{
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }}
+    .detail-label {{
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }}
+    .detail-val {{
+      font-size: 0.95rem;
+      color: #f1f5f9;
+      font-weight: 500;
+    }}
+    
+    .evidence-section {{
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }}
+    .evidence-title {{
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .gallery-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }}
+    .gallery-item {{
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }}
+    .gallery-item:hover {{
+      border-color: var(--primary-light);
+      transform: translateY(-2px);
+    }}
+    .gallery-thumb {{
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+      background: #020617;
+    }}
+    .gallery-caption {{
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+    }}
+    .gallery-badge {{
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }}
+
+    /* Lightbox Modal */
+    .lightbox {{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.88);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 2rem;
+    }}
+    .lightbox.active {{
+      display: flex;
+    }}
+    .lightbox-content {{
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }}
+    .lightbox-img {{
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }}
+    .lightbox-title {{
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+    }}
+    .lightbox-close {{
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      font-size: 2.2rem;
+      color: #fff;
+      cursor: pointer;
+      line-height: 1;
+    }}
+
+    footer {{
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>📊 Auditoria e Enfileiramento no ICD (Senac)</h1>
+        <p>Relatório de validação de roteamento de chamados e exclusão de teste</p>
+      </div>
+      <div>
+        <span class="badge-env">Gerado em: {timestamp_str}</span>
+      </div>
+    </header>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Total de Chamados</span>
+        <span class="metric-value">{total}</span>
+      </div>
+      <div class="metric-card success">
+        <span class="metric-label">Enfileirados no Grupo</span>
+        <span class="metric-value">{enfileirados}</span>
+      </div>
+      <div class="metric-card warning">
+        <span class="metric-label">Não Enfileirados (4m)</span>
+        <span class="metric-value">{nao_enfileirados}</span>
+      </div>
+      <div class="metric-card success">
+        <span class="metric-label">Excluídos (Teste)</span>
+        <span class="metric-value">{excluidos_sucesso}</span>
+      </div>
+      <div class="metric-card {'danger' if manuais > 0 else ''}">
+        <span class="metric-label">Ação Manual Requerida</span>
+        <span class="metric-value">{manuais}</span>
+      </div>
+    </div>
+
+    <!-- Banner de Alerta para chamados pendentes -->
+    <div class="alert-banner {'hide' if manuais == 0 else ''}">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <h3>Intervenção Manual Necessária no ICD</h3>
+        <p>{manuais} chamado(s) falharam na reclassificação automática após 3 tentativas. Utilize os links diretos abaixo para excluí-los manualmente.</p>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>📋 Detalhamento dos Chamados Auditados</span>
+    </div>
+
+    <div class="tickets-list">
+"""
+
+    for item in items:
+        ticket_id = item.get("ticket_id", "")
+        flow_name = item.get("flow_name", "")
+        subject = item.get("subject", "")
+        grupo = item.get("grupo_atendimento", "")
+        enfileirou = item.get("enfileirou", False)
+        wait_seconds = item.get("wait_seconds", 0)
+        reclassificado = item.get("reclassificado", False)
+        attempts = item.get("attempts", 1)
+        manual = item.get("manual_action_required", False)
+        direct_link = item.get("direct_link") or f"https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid={ticket_id}"
+
+        # Status badge do enfileiramento
+        if enfileirou:
+            enfileiramento_badge = f"""<span class="badge-status success">✓ Enfileirado ({wait_seconds}s)</span>"""
+            grupo_display = grupo or "Grupo Identificado"
+        else:
+            enfileiramento_badge = f"""<span class="badge-status warning">⚠ Não Enfileirou (Timeout 4m)</span>"""
+            grupo_display = '<span style="color: #f59e0b;">(Vazio / Não roteado)</span>'
+
+        # Status badge da exclusão
+        if reclassificado:
+            exclusao_badge = f"""<span class="badge-status success">✓ Excluído (Chamado Teste)</span>"""
+        elif manual:
+            exclusao_badge = f"""<span class="badge-status danger">🚨 Exclusão Manual Necessária</span>"""
+        else:
+            exclusao_badge = f"""<span class="badge-status warning">Em Aberto</span>"""
+
+        # Galeria de Screenshots
+        shots_html = ""
+        screenshots = item.get("screenshots", [])
+        if screenshots:
+            shots_html = '<div class="gallery-grid">'
+            for s in screenshots:
+                shot_path = s.get("path", "")
+                caption = s.get("caption", "Evidência")
+                stage = s.get("stage", "Print")
+                # Caminho relativo para exibição no HTML
+                rel_path = shot_path
+                if "reports/" in rel_path:
+                    rel_path = rel_path.split("reports/", 1)[1]
+                elif "reports\\" in rel_path:
+                    rel_path = rel_path.split("reports\\", 1)[1]
+
+                # Normaliza para URL web com barras normais (evita \t de screenshots\ticket)
+                rel_url = rel_path.replace("\\", "/")
+                safe_caption = html.escape(caption, quote=True)
+                safe_stage = html.escape(stage, quote=True)
+
+                shots_html += f"""
+                <div class="gallery-item" onclick="openLightbox(this)">
+                  <img src="{rel_url}" alt="{safe_caption}" class="gallery-thumb" loading="lazy">
+                  <div class="gallery-caption">
+                    <span>{safe_caption}</span>
+                    <span class="gallery-badge">{safe_stage}</span>
+                  </div>
+                </div>
+                """
+            shots_html += "</div>"
+        else:
+            shots_html = '<p style="color: var(--text-muted); font-size: 0.85rem;">Nenhuma captura registrada.</p>'
+
+        html_content += f"""
+      <div class="ticket-card">
+        <div class="ticket-header">
+          <div class="ticket-id-group">
+            <div>
+              <a href="{direct_link}" target="_blank" class="ticket-id" title="Abrir solicitação no Maximo">
+                #{ticket_id} ↗
+              </a>
+              <div class="ticket-subject">{subject or flow_name}</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {enfileiramento_badge}
+            {exclusao_badge}
+          </div>
+        </div>
+
+        <div class="ticket-details-grid">
+          <div class="detail-item">
+            <span class="detail-label">Grupo de Atendimento</span>
+            <span class="detail-val">{grupo_display}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tempo até Enfileirar</span>
+            <span class="detail-val">{wait_seconds}s</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fluxo do Assistente</span>
+            <span class="detail-val">{flow_name or 'N/A'}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Tentativas de Exclusão</span>
+            <span class="detail-val">{attempts} de 3</span>
+          </div>
+        </div>
+
+        <div class="evidence-section">
+          <span class="evidence-title">📸 Evidências Visuais (Clique para ampliar):</span>
+          {shots_html}
+        </div>
+      </div>
+"""
+
+    html_content += """
+    </div>
+
+    <footer>
+      <p>Robô de Auditoria e Enfileiramento IBM Control Desk (ICD) • Assistente Virtual Senac SP</p>
+      <p style="margin-top: 0.25rem;">Política de retenção ativa: mantendo os 10 relatórios mais recentes em reports/</p>
+    </footer>
+  </div>
+
+  <!-- Modal Lightbox -->
+  <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+    <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <div class="lightbox-content">
+      <img id="lightbox-img" class="lightbox-img" src="" alt="Zoom Evidência">
+      <div id="lightbox-title" class="lightbox-title"></div>
+    </div>
+  </div>
+
+  <script>
+    function openLightbox(target, fallbackTitle) {
+      const lightboxImg = document.getElementById('lightbox-img');
+      const lightboxTitle = document.getElementById('lightbox-title');
+      if (typeof target === 'string') {
+        lightboxImg.src = target.replace(/\\/g, '/');
+        lightboxTitle.innerText = fallbackTitle || '';
+      } else if (target && target.querySelector) {
+        const img = target.querySelector('img');
+        if (img) {
+          lightboxImg.src = img.currentSrc || img.src || img.getAttribute('src');
+          lightboxTitle.innerText = img.getAttribute('alt') || fallbackTitle || '';
+        }
+      }
+      document.getElementById('lightbox').classList.add('active');
+    }
+    function closeLightbox(e) {
+      if (!e || e.target.id === 'lightbox' || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('active');
+      }
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLightbox();
+    });
+  </script>
+</body>
+</html>
+"""
+
+    output_path.write_text(html_content, encoding="utf-8")
+    
+    # Aplica política de retenção
+    prune_old_reports(reports_dir, keep=keep_history)
+
+    return output_path

@@ -12,6 +12,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from core.hub import build_thread_id, get_graph
 from flows.session import normalize_user_info
 from tests.config import ASSISTANT_ID, TEST_USER_INFO
+from tests.test_mass import get_test_user
 from tests.scenarios.base import CreatedTicket, Scenario, ScenarioResult, Turn, TurnResult
 
 _TICKET_REGEX = re.compile(
@@ -88,8 +89,10 @@ class FlowTestRunner:
         created_tickets: list[CreatedTicket] = []
         all_passed = True
 
-        # Mescla dados específicos do cenário com os dados base do colaborador (preservando acessoRelatorios, etc.)
-        merged_user = dict(TEST_USER_INFO)
+        # Obtém o colaborador base (Pedro Muniz por padrão; Flavio Machado se require_acesso_total=True)
+        require_full = bool(scenario.metadata.get("require_acesso_total", False))
+        base_user = get_test_user(require_full_access=require_full)
+        merged_user = dict(base_user)
         scenario_user = scenario.metadata.get("user_info")
         if scenario_user:
             if "DADOS" in merged_user and isinstance(merged_user["DADOS"], dict):
@@ -160,6 +163,18 @@ class FlowTestRunner:
                         f"Texto não contém nenhum dos termos esperados {exp.text_contains_any}. Resposta recebida: {output_text}"
                     )
 
+            # Detecção de mensagens de erro explícitas da API de abertura de chamado
+            lower_output = output_text.casefold()
+            is_abertura_scenario = (
+                "abertura_chamado" in scenario.flow_name.casefold()
+                or "abertura_chamado" in scenario.id.casefold()
+                or "abertura" in scenario.name.casefold()
+            )
+            is_done_turn = bool(exp.is_done) or idx == len(scenario.turns)
+
+            if "não abri o chamado" in lower_output or "temporariamente indisponível" in lower_output:
+                errors.append(f"Fluxo retornou erro/recusa na abertura do chamado: '{output_text}'")
+
             # Captura de ticket gerado
             ticket: CreatedTicket | None = None
             raw_ticket_id = _extract_ticket_id(output_text)
@@ -173,6 +188,10 @@ class FlowTestRunner:
                     chapa=str(user_dados.get("CHAPA") or "99999"),
                 )
                 created_tickets.append(ticket)
+            elif is_abertura_scenario and is_done_turn:
+                errors.append(
+                    f"❌ OBRIGATÓRIO PROTOCOLO: O cenário só pode passar (PASS) se gerar um número de protocolo válido. Resposta: '{output_text}'"
+                )
 
             turn_passed = len(errors) == 0
             if not turn_passed:
@@ -193,6 +212,14 @@ class FlowTestRunner:
             )
 
         duration_ms = (time.perf_counter() - t0) * 1000
+        is_abertura_scenario = (
+            "abertura_chamado" in scenario.flow_name.casefold()
+            or "abertura_chamado" in scenario.id.casefold()
+            or "abertura" in scenario.name.casefold()
+        )
+        if is_abertura_scenario and not created_tickets:
+            all_passed = False
+
         return ScenarioResult(
             scenario_id=scenario.id,
             scenario_name=scenario.name,

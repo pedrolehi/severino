@@ -44,7 +44,7 @@
           }
         },
         {
-          "input_text": "Meu crachá quebrou na catraca e preciso de uma nova via.",
+          "input_text": "[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Meu crachá quebrou na catraca e preciso de uma nova via.",
           "description": "Preenchimento do detalhe do problema",
           "expected": {
             "active_flow": "gep_abertura_chamado_crachas",
@@ -61,12 +61,10 @@
           "expected": {
             "active_flow": null,
             "flow_step": null,
-            "text_contains": [],
-            "text_contains_any": [
-              "protocolo",
-              "temporariamente indisponível",
-              "não abri o chamado"
+            "text_contains": [
+              "protocolo"
             ],
+            "text_contains_any": [],
             "has_ui": null,
             "ui_component": null,
             "is_done": true
@@ -93,7 +91,7 @@
           }
         },
         {
-          "input_text": "O aplicativo Ponto WEB não gravou as batidas de ontem.",
+          "input_text": "[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] O aplicativo Ponto WEB não gravou as batidas de ontem.",
           "description": "Preenchimento do detalhe do erro",
           "expected": {
             "active_flow": "gep_abertura_chamado_ponto_eletronico",
@@ -110,12 +108,10 @@
           "expected": {
             "active_flow": null,
             "flow_step": null,
-            "text_contains": [],
-            "text_contains_any": [
-              "protocolo",
-              "temporariamente indisponível",
-              "não abri o chamado"
+            "text_contains": [
+              "protocolo"
             ],
+            "text_contains_any": [],
             "has_ui": null,
             "ui_component": null,
             "is_done": true
@@ -166,7 +162,7 @@
           }
         },
         {
-          "input_text": "Gostaria de solicitar informações para empréstimo consignado.",
+          "input_text": "[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Gostaria de solicitar informações para empréstimo consignado.",
           "description": "Preenchimento do detalhe da solicitação",
           "expected": {
             "active_flow": "gep_abertura_chamado_beneficios",
@@ -183,13 +179,10 @@
           "expected": {
             "active_flow": null,
             "flow_step": null,
-            "text_contains": [],
-            "text_contains_any": [
-              "protocolo",
-              "DADOS.WSCHAMADO is undefined",
-              "temporariamente indisponível",
-              "não abri o chamado"
+            "text_contains": [
+              "protocolo"
             ],
+            "text_contains_any": [],
             "has_ui": null,
             "ui_component": null,
             "is_done": true
@@ -240,7 +233,7 @@
           }
         },
         {
-          "input_text": "Dúvida referente ao processo de emissão para docente CLT.",
+          "input_text": "[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Dúvida referente ao processo de emissão para docente CLT.",
           "description": "Preenchimento do detalhe",
           "expected": {
             "active_flow": "gep_abertura_chamado_carta_convite",
@@ -685,7 +678,7 @@
           }
         },
         {
-          "input_text": "Dúvida de cliente presencial referente a pendência cadastral na unidade.",
+          "input_text": "[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Dúvida de cliente presencial referente a pendência cadastral na unidade.",
           "description": "Preenchimento do detalhe do problema",
           "expected": {
             "active_flow": "gcr_abertura_chamado",
@@ -745,7 +738,7 @@
           }
         },
         {
-          "input_text": "Solicitação de portaria para novo diretor da unidade escolar Lapa Tito.",
+          "input_text": "[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] Solicitação de portaria para novo diretor da unidade escolar Lapa Tito.",
           "description": "Preenchimento do detalhe da solicitação",
           "expected": {
             "active_flow": "geduc_abertura_chamado",
@@ -762,12 +755,10 @@
           "expected": {
             "active_flow": null,
             "flow_step": null,
-            "text_contains": [],
-            "text_contains_any": [
-              "protocolo",
-              "temporariamente indisponível",
-              "não abri o chamado"
+            "text_contains": [
+              "protocolo"
             ],
+            "text_contains_any": [],
             "has_ui": null,
             "ui_component": null,
             "is_done": true

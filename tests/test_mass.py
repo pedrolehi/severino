@@ -23,16 +23,32 @@ SENAC_UNIDADES_CNPJ: dict[str, str] = {
 }
 
 
-def get_test_user() -> dict[str, Any]:
-    """Retorna o perfil do colaborador autenticado para os testes E2E."""
-    chapa = os.getenv("TEST_USER_CHAPA") or os.getenv("TEST_CHAPA", "1142372")
-    nome = os.getenv("TEST_USER_NOME") or os.getenv("TEST_NOME", "FLAVIO CARVALHO MACHADO")
-    nome_social = os.getenv("TEST_USER_NOME_SOCIAL") or os.getenv("TEST_NOME_SOCIAL", "")
-    email = os.getenv("TEST_USER_EMAIL") or os.getenv("TEST_EMAIL", "flavio.cmachado@sp.senac.br")
-    cpf = os.getenv("TEST_USER_CPF") or os.getenv("TEST_CPF", "443.456.428-50")
-    unidade = os.getenv("TEST_USER_UNIDADE") or os.getenv("TEST_UNIDADE", "CAS")
-    data_nascimento = os.getenv("TEST_USER_DATA_NASCIMENTO", "01/01/1990")
-    pis = os.getenv("TEST_USER_PIS", "12345678900")
+def get_test_user(require_full_access: bool = False) -> dict[str, Any]:
+    """Retorna o perfil do colaborador autenticado para os testes E2E.
+
+    - Fluxos gerais (Crachás, Ponto, Benefícios, GCR, GEDUC): Pedro Muniz (acessoTotal=False).
+    - Fluxos financeiros/orçamentários (GEF): Flavio Carvalho Machado (acessoTotal=True).
+    """
+    if require_full_access:
+        chapa = os.getenv("TEST_USER_CHAPA") or os.getenv("TEST_CHAPA", "1142372")
+        nome = os.getenv("TEST_USER_NOME") or os.getenv("TEST_NOME", "FLAVIO CARVALHO MACHADO")
+        nome_social = os.getenv("TEST_USER_NOME_SOCIAL") or os.getenv("TEST_NOME_SOCIAL", "")
+        email = os.getenv("TEST_USER_EMAIL") or os.getenv("TEST_EMAIL", "flavio.cmachado@sp.senac.br")
+        cpf = os.getenv("TEST_USER_CPF") or os.getenv("TEST_CPF", "443.456.428-50")
+        unidade = os.getenv("TEST_USER_UNIDADE") or os.getenv("TEST_UNIDADE", "CAS")
+        data_nascimento = os.getenv("TEST_USER_DATA_NASCIMENTO", "01/01/1990")
+        pis = os.getenv("TEST_USER_PIS", "12345678900")
+        acesso_total = True
+    else:
+        chapa = os.getenv("PEDRO_CHAPA") or os.getenv("TEST_USER_CHAPA", "1142372")
+        nome = os.getenv("PEDRO_NOME", "PEDRO LEHI RODRIGUES MUNIZ")
+        nome_social = ""
+        email = os.getenv("PEDRO_EMAIL", "pedro.lrmuniz@sp.senac.br")
+        cpf = os.getenv("PEDRO_CPF") or os.getenv("TEST_USER_CPF", "443.456.428-50")
+        unidade = os.getenv("PEDRO_UNIDADE", "CAS")
+        data_nascimento = "01/01/1990"
+        pis = "12345678900"
+        acesso_total = False
 
     return {
         "CODIGO": 200,
@@ -48,7 +64,7 @@ def get_test_user() -> dict[str, Any]:
         },
         "MENSAGEM": "OK",
         "acessoRelatorios": {
-            "acessoTotal": True,
+            "acessoTotal": acesso_total,
             "codPessoa": 1143211214,
             "status": 200,
         },
