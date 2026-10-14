@@ -19,9 +19,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
+
+logger = logging.getLogger("icd_cleaner_robot")
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -91,7 +94,7 @@ class ICDAuditAndCleanerRobot:
             or os.getenv("ICD_LOGIN_URL")
             or "https://iam.sp.senac.br/auth/realms/administrativo/protocol/saml/clients/suporte"
         )
-        self.username = username or os.getenv("ICD_USERNAME") or os.getenv("ICD_USER") or "pedro.lrmuniz"
+        self.username = username or os.getenv("ICD_USERNAME") or os.getenv("ICD_USER") or ""
         self.password = password or os.getenv("ICD_PASSWORD") or os.getenv("ICD_PASS") or ""
         self.headless = headless
         self.slow_mo_ms = slow_mo_ms
@@ -228,83 +231,146 @@ class ICDAuditAndCleanerRobot:
             time.sleep(1)
 
     def _get_grupo_atendimento(self, page) -> str:
-        """Tenta extrair o valor do campo 'Grupo de Atendimento' na tela do Maximo.
+        """Tenta extrair o valor legítimo do campo 'Grupo de Atendimento' na tela do Maximo.
 
-        No cabeçalho do Maximo, os campos são organizados em tabelas de linhas alternadas:
-        Linha N: Labels ('Solicitante:', 'Grupo de Atendimento:', 'Anexos')
-        Linha N+1: Valores ('MXINTADM', 'GEP - Crachás', '...')
-        O valor não é um <input>, mas sim texto estático em <td> ou <span>.
+        Usa prioritariamente o seletor oficial do Playwright Codegen:
+        page.get_by_role("textbox", name="Grupo de Atendimento:")
         """
+        # 1. PRIORIDADE MÁXIMA: Seletor oficial identificado no Playwright Codegen
+        try:
+            import re
+            for name_pattern in ["Grupo de Atendimento:", "Grupo de Atendimento", re.compile(r"Grupo de Atendimento", re.I)]:
+                tb = page.get_by_role("textbox", name=name_pattern)
+                if tb.count() > 0:
+                    raw = ""
+                    try:
+                        raw = tb.first.input_value().strip()
+                    except Exception:
+                        pass
+                    if not raw:
+                        try:
+                            raw = (tb.first.get_attribute("value") or "").strip()
+                        except Exception:
+                            pass
+                    if not raw:
+                        try:
+                            raw = (tb.first.inner_text() or "").strip()
+                        except Exception:
+                            pass
+                    if not raw:
+                        try:
+                            raw = (tb.first.text_content() or "").strip()
+                        except Exception:
+                            pass
+
+                    if raw and raw not in ("-", "&nbsp;", "null") and "=" not in raw and "clientAreaId" not in raw and len(raw) >= 3:
+                        cleaned = re.sub(r"^Grupo\s+de\s+Atendimento\s*:?\s*", "", raw, flags=re.I).strip()
+                        if cleaned and len(cleaned) >= 3:
+                            return cleaned
+        except Exception:
+            pass
+
+        # 2. Fallbacks de inspeção estrutural no DOM via evaluate
         try:
             val = page.evaluate(r"""() => {
-                // 1. Procura em inputs com title, id ou aria-label correspondente
-                for (const inp of document.querySelectorAll('input, select, textarea')) {
-                    const id = (inp.id || '').toLowerCase();
-                    const title = (inp.title || '').toLowerCase();
-                    const aria = (inp.getAttribute('aria-label') || '').toLowerCase();
-                    if (id.includes('ownergroup') || title.includes('grupo de atendimento') || aria.includes('grupo de atendimento')) {
-                        const v = (inp.value || '').trim();
-                        if (v && v !== '-' && v !== '&nbsp;') return v;
+                function cleanCandidate(s) {
+                    if (!s || typeof s !== 'string') return '';
+                    let str = s.trim();
+                    str = str.replace(/^Grupo\s+de\s+Atendimento\s*:?\s*/i, '').trim();
+                    const lines = str.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+                    if (lines.length > 0) {
+                        str = lines[0];
+                    }
+                    return str.trim();
+                }
+
+                function isValidGroup(raw) {
+                    const s = cleanCandidate(raw);
+                    if (!s || s === '-' || s === '&nbsp;' || s === 'null' || s === 'undefined') return false;
+                    if (s.includes('=') || s.includes(';') || s.includes('{') || s.includes('}') || s.includes('<') || s.includes('>')) return false;
+                    if (/clientAreaId|script|function|style|var\s|let\s|const\s/i.test(s)) return false;
+                    if (/^(Solicitante|Proprietário|Status|Anexos|Tipo da Requisição|Origem|Meio de abertura|Duplicado pai)$/i.test(s)) return false;
+                    if (s.length < 3 || !/[a-zA-Z]/.test(s)) return false;
+                    return true;
+                }
+
+                function getCleanText(node) {
+                    if (!node) return '';
+                    if (node.value && typeof node.value === 'string' && node.value.trim()) {
+                        return node.value.trim();
+                    }
+                    const inp = node.querySelector ? node.querySelector('input, textarea, select') : null;
+                    if (inp && inp.value && inp.value.trim()) {
+                        return inp.value.trim();
+                    }
+                    try {
+                        const clone = node.cloneNode(true);
+                        clone.querySelectorAll('script, style, noscript, svg, input[type="hidden"]').forEach(el => el.remove());
+                        return (clone.innerText || clone.textContent || '').trim();
+                    } catch (e) {
+                        return (node.innerText || node.textContent || '').trim();
                     }
                 }
 
-                // 2. Busca pela tabela do cabeçalho do Maximo com labels e valores em linhas alternadas
-                const allLabels = Array.from(document.querySelectorAll('span, label, td, div, b, strong'));
-                for (const el of allLabels) {
-                    const txt = (el.innerText || el.textContent || '').trim();
-                    if (/Grupo de Atendimento/i.test(txt)) {
-                        // Caso A: Tabela Maximo (linha de labels em cima, linha de valores imediatamente abaixo)
-                        const td = el.closest('td');
-                        if (td) {
-                            const tr = td.closest('tr');
-                            if (tr && tr.nextElementSibling) {
-                                const colIdx = Array.from(tr.children).indexOf(td);
-                                const nextRow = tr.nextElementSibling;
-                                if (nextRow && nextRow.children[colIdx]) {
-                                    const nextTd = nextRow.children[colIdx];
-                                    const rawVal = (nextTd.innerText || nextTd.textContent || '').trim();
-                                    if (rawVal && rawVal !== '-' && rawVal !== '&nbsp;' && !/^(Solicitante|Proprietário|Status|Anexos|Grupo|Tipo)/i.test(rawVal)) {
-                                        return rawVal.split('\n')[0].trim();
-                                    }
-                                }
+                // 1. Label com atributo 'for' apontando para o id do elemento
+                for (const lbl of document.querySelectorAll('label, span.text, td')) {
+                    const txt = (lbl.innerText || lbl.textContent || '').trim();
+                    if (/^Grupo de Atendimento\s*:?$/i.test(txt)) {
+                        const forId = lbl.getAttribute('for') || lbl.htmlFor;
+                        if (forId) {
+                            const target = document.getElementById(forId);
+                            if (target) {
+                                const raw = getCleanText(target);
+                                if (isValidGroup(raw)) return cleanCandidate(raw);
                             }
+                        }
+                    }
+                }
 
-                            // Caso B: Valor na TD seguinte (mesma linha)
+                // 2. Tabela do Maximo (célula de label e célula de valor na linha de baixo ou ao lado)
+                const allCells = Array.from(document.querySelectorAll('td, th, span'));
+                for (const cell of allCells) {
+                    const cellTxt = (cell.innerText || cell.textContent || '').trim();
+                    if (/^Grupo de Atendimento\s*:?$/i.test(cellTxt) || (cellTxt.startsWith('Grupo de Atendimento') && cellTxt.length < 35)) {
+                        const td = cell.closest('td') || cell;
+                        const tr = td.closest('tr');
+                        if (tr) {
+                            const colIdx = Array.from(tr.children).indexOf(td);
+                            const nextRow = tr.nextElementSibling;
+                            if (nextRow && nextRow.children && nextRow.children[colIdx]) {
+                                const raw = getCleanText(nextRow.children[colIdx]);
+                                if (isValidGroup(raw)) return cleanCandidate(raw);
+                            }
                             if (td.nextElementSibling) {
-                                const nextTd = td.nextElementSibling;
-                                const rawVal = (nextTd.innerText || nextTd.textContent || '').trim();
-                                if (rawVal && rawVal !== '-' && rawVal !== '&nbsp;' && !/^(Solicitante|Proprietário|Status|Anexos|Grupo|Tipo)/i.test(rawVal)) {
-                                    return rawVal.split('\n')[0].trim();
-                                }
-                            }
-                        }
-
-                        // Caso C: O valor está no mesmo container após ':'
-                        const match = txt.match(/Grupo de Atendimento\s*:?\s*([^\n\r]+)/i);
-                        if (match && match[1]) {
-                            const candidate = match[1].trim();
-                            if (candidate && candidate !== '-' && !/^(Solicitante|Proprietário|Status|Anexos)/i.test(candidate)) {
-                                return candidate;
-                            }
-                        }
-
-                        // Caso D: Elemento irmão adjacente
-                        if (el.nextElementSibling) {
-                            const rawVal = (el.nextElementSibling.innerText || el.nextElementSibling.textContent || '').trim();
-                            if (rawVal && rawVal !== '-' && !/^(Solicitante|Proprietário|Status|Anexos|Grupo)/i.test(rawVal)) {
-                                return rawVal.split('\n')[0].trim();
+                                const raw = getCleanText(td.nextElementSibling);
+                                if (isValidGroup(raw)) return cleanCandidate(raw);
                             }
                         }
                     }
                 }
 
-                // 3. Procura por elementos com id contendo ownergroup (ignorando scripts internos do Maximo)
-                for (const el of document.querySelectorAll('[id*="ownergroup"], [id*="OWNERGROUP"]')) {
-                    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
-                    const text = (el.innerText || el.textContent || el.value || '').trim();
-                    if (text && text !== '-' && !/Grupo de Atendimento/i.test(text) && !text.includes('clientAreaId') && !text.includes('=')) {
-                        return text.split('\n')[0].trim();
+                // 3. Texto na página entre 'Grupo de Atendimento:' e 'Proprietário'
+                const fullText = document.body ? (document.body.innerText || '') : '';
+                const matchBetween = fullText.match(/Grupo de Atendimento\s*:?\s*([^\n\r]+?)\s*(?:Proprietário|Meio de abertura|Anexos|$)/i);
+                if (matchBetween && matchBetween[1]) {
+                    const raw = matchBetween[1].trim();
+                    if (isValidGroup(raw)) return cleanCandidate(raw);
+                }
+
+                // 4. Inputs com id, title, name ou aria contendo 'ownergroup' ou 'grupo'
+                for (const inp of document.querySelectorAll('input, select, textarea')) {
+                    const attrStr = ((inp.id || '') + ' ' + (inp.name || '') + ' ' + (inp.title || '') + ' ' + (inp.getAttribute('aria-label') || '')).toLowerCase();
+                    if (attrStr.includes('ownergroup') || attrStr.includes('grupo de atendimento')) {
+                        const val = (inp.value || '').trim();
+                        if (isValidGroup(val)) return cleanCandidate(val);
                     }
+                }
+
+                // 5. Qualquer elemento com ID contendo ownergroup
+                for (const el of document.querySelectorAll('[id*="ownergroup" i], [id*="OWNERGROUP"]')) {
+                    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+                    const raw = getCleanText(el);
+                    if (isValidGroup(raw)) return cleanCandidate(raw);
                 }
 
                 return '';
@@ -314,22 +380,25 @@ class ICDAuditAndCleanerRobot:
         except Exception:
             pass
 
-        # Fallback legado
-        candidates = [
-            "input[title*='Grupo de Atendimento']",
-            "input[aria-label*='Grupo de Atendimento']",
-            "input[id*='ownergroup']",
-            "input[title*='Owner Group']",
-        ]
-        for sel in candidates:
-            loc = page.locator(sel)
-            if loc.count() > 0 and loc.first.is_visible():
-                try:
-                    val = loc.first.input_value()
-                    if val and val.strip() and val.strip() not in ("-", "&nbsp;"):
-                        return val.strip()
-                except Exception:
-                    pass
+        # Fallback Playwright Locator direto
+        try:
+            for text_lbl in ["Grupo de Atendimento:", "Grupo de Atendimento"]:
+                lbl = page.locator(f"text='{text_lbl}'")
+                if lbl.count() > 0:
+                    td = lbl.first.locator("xpath=ancestor::td[1]")
+                    if td.count() > 0:
+                        val_td = td.locator("xpath=../following-sibling::tr[1]/td[count(current()/preceding-sibling::td) + 1]")
+                        if val_td.count() > 0:
+                            inp = val_td.locator("input")
+                            if inp.count() > 0:
+                                v = inp.first.input_value().strip()
+                                if v and len(v) >= 3 and "=" not in v:
+                                    return v
+                            txt = val_td.first.inner_text().strip()
+                            if txt and len(txt) >= 3 and "=" not in txt and "clientAreaId" not in txt:
+                                return txt
+        except Exception:
+            pass
 
         return ""
 
@@ -622,7 +691,11 @@ class ICDAuditAndCleanerRobot:
         json_report_path.write_text(json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8")
 
         # 2. Gera Relatório HTML com visual moderno e Lightbox
-        generate_html_report(report_data, html_report_path, keep_history=self.keep_history)
+        try:
+            generate_html_report(report_data, html_report_path, keep_history=self.keep_history)
+        except Exception as err:
+            logger.error(f"Erro ao gerar relatório HTML: {err}", exc_info=True)
+            print(f"⚠️ Erro ao gerar relatório HTML: {err}")
 
         # 3. Exibe resumo no terminal
         print("\n" + "=" * 80)

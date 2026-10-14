@@ -163,7 +163,7 @@ def generate_html_report(
 """
 
         # Mapeia itens de auditoria por ticket_id
-        items_by_ticket = {{str(it.get("ticket_id", "")).strip(): it for it in items}}
+        items_by_ticket = {str(it.get("ticket_id", "")).strip(): it for it in items}
 
         # Matriz dos cenários classificando Chamados vs Consultas e status de encerramento
         rows_html = ""
@@ -552,51 +552,119 @@ def generate_html_report(
       color: #fff;
     }}
 
-    /* Lightbox Modal */
+    /* Lightbox Modal Interativo com Zoom e Pan */
     .lightbox {{
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.88);
+      background: rgba(10, 15, 29, 0.95);
+      backdrop-filter: blur(8px);
       display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      padding: 2rem;
+      flex-direction: column;
+      z-index: 99999;
+      user-select: none;
     }}
     .lightbox.active {{
       display: flex;
     }}
-    .lightbox-content {{
-      max-width: 90%;
-      max-height: 90%;
+    .lightbox-toolbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.85rem 1.5rem;
+      background: rgba(15, 23, 42, 0.9);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }}
+    .lightbox-title-info {{
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-    }}
-    .lightbox-img {{
-      max-width: 100%;
-      max-height: 80vh;
-      border-radius: 8px;
-      border: 1px solid #475569;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      gap: 0.15rem;
     }}
     .lightbox-title {{
       color: #fff;
       font-size: 1rem;
-      font-weight: 500;
+      font-weight: 600;
     }}
-    .lightbox-close {{
-      position: absolute;
-      top: 1.5rem;
-      right: 2rem;
-      font-size: 2.2rem;
-      color: #fff;
+    .lightbox-hint {{
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }}
+    .lightbox-controls {{
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }}
+    .lightbox-btn {{
+      background: rgba(30, 41, 59, 0.8);
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
       cursor: pointer;
-      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s;
+    }}
+    .lightbox-btn:hover {{
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-light);
+    }}
+    .lightbox-btn.close-btn {{
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }}
+    .lightbox-btn.close-btn:hover {{
+      background: var(--danger);
+      color: #fff;
+    }}
+    .lightbox-zoom-val {{
+      color: var(--primary-light);
+      font-weight: 700;
+      font-size: 0.85rem;
+      min-width: 45px;
+      text-align: center;
+      font-family: monospace;
+    }}
+    .lightbox-viewport {{
+      flex: 1;
+      width: 100%;
+      height: calc(100% - 60px);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: grab;
+    }}
+    .lightbox-viewport.grabbing {{
+      cursor: grabbing;
+    }}
+    .lightbox-img-wrapper {{
+      position: absolute;
+      transform-origin: center center;
+      transition: transform 0.08s ease-out;
+      will-change: transform;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    .lightbox-img {{
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 6px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+      border: 1px solid #475569;
+      pointer-events: none;
     }}
 
     /* Resumo Centralizado da Bateria de Testes */
@@ -960,38 +1028,166 @@ def generate_html_report(
     </footer>
   </div>
 
-  <!-- Modal Lightbox -->
-  <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
-    <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
-    <div class="lightbox-content">
-      <img id="lightbox-img" class="lightbox-img" src="" alt="Zoom Evidência">
-      <div id="lightbox-title" class="lightbox-title"></div>
+  <!-- Modal Lightbox com Zoom Interativo -->
+  <div id="lightbox" class="lightbox">
+    <div class="lightbox-toolbar">
+      <div class="lightbox-title-info">
+        <span id="lightbox-title" class="lightbox-title">Evidência</span>
+        <span class="lightbox-hint">Dica: Use a rodinha do mouse ou clique duas vezes para dar zoom, e arraste para navegar</span>
+      </div>
+      <div class="lightbox-controls">
+        <button type="button" class="lightbox-btn" onclick="zoomIn()" title="Aumentar zoom (+)">🔍+ Zoom In</button>
+        <button type="button" class="lightbox-btn" onclick="zoomOut()" title="Diminuir zoom (-)">🔍- Zoom Out</button>
+        <span id="lightbox-zoom-val" class="lightbox-zoom-val">100%</span>
+        <button type="button" class="lightbox-btn" onclick="resetZoom()" title="Ajustar à tela">📐 Ajustar</button>
+        <button type="button" class="lightbox-btn" onclick="setZoomReal()" title="Visualizar em tamanho real (1:1)">1:1 Real</button>
+        <button type="button" class="lightbox-btn" onclick="openOriginal()" title="Abrir imagem isolada em nova aba">↗ Nova Aba</button>
+        <button type="button" id="lightbox-close-btn" class="lightbox-btn close-btn" onclick="closeLightbox()" title="Fechar (Esc)">✕ Fechar</button>
+      </div>
+    </div>
+    <div id="lightbox-viewport" class="lightbox-viewport">
+      <div id="lightbox-img-wrapper" class="lightbox-img-wrapper">
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Zoom Evidência">
+      </div>
     </div>
   </div>
 
   <script>
+    let currentZoom = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let currentImgUrl = '';
+
+    function updateTransform() {
+      const wrapper = document.getElementById('lightbox-img-wrapper');
+      const zoomText = document.getElementById('lightbox-zoom-val');
+      if (wrapper) {
+        wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+      }
+      if (zoomText) {
+        zoomText.innerText = Math.round(currentZoom * 100) + '%';
+      }
+    }
+
+    function resetZoom() {
+      currentZoom = 1;
+      panX = 0;
+      panY = 0;
+      updateTransform();
+    }
+
+    function zoomIn() {
+      currentZoom = Math.min(Number((currentZoom + 0.25).toFixed(2)), 4.0);
+      updateTransform();
+    }
+
+    function zoomOut() {
+      currentZoom = Math.max(Number((currentZoom - 0.25).toFixed(2)), 0.4);
+      updateTransform();
+    }
+
+    function setZoomReal() {
+      currentZoom = 1.6;
+      panX = 0;
+      panY = 0;
+      updateTransform();
+    }
+
+    function openOriginal() {
+      if (currentImgUrl) {
+        window.open(currentImgUrl, '_blank');
+      }
+    }
+
     function openLightbox(target, fallbackTitle) {
       const lightboxImg = document.getElementById('lightbox-img');
       const lightboxTitle = document.getElementById('lightbox-title');
+      let src = '';
+      let title = fallbackTitle || '';
+
       if (typeof target === 'string') {
-        lightboxImg.src = target.replace(/\\/g, '/');
-        lightboxTitle.innerText = fallbackTitle || '';
+        src = target.split('\\\\').join('/');
       } else if (target && target.querySelector) {
         const img = target.querySelector('img');
         if (img) {
-          lightboxImg.src = img.currentSrc || img.src || img.getAttribute('src');
-          lightboxTitle.innerText = img.getAttribute('alt') || fallbackTitle || '';
+          src = img.currentSrc || img.src || img.getAttribute('src');
+          title = img.getAttribute('alt') || fallbackTitle || '';
         }
       }
+
+      currentImgUrl = src;
+      lightboxImg.src = src;
+      lightboxTitle.innerText = title;
+
+      resetZoom();
       document.getElementById('lightbox').classList.add('active');
     }
-    function closeLightbox(e) {
-      if (!e || e.target.id === 'lightbox' || e.target.classList.contains('lightbox-close')) {
-        document.getElementById('lightbox').classList.remove('active');
-      }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+      resetZoom();
     }
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeLightbox();
+
+    // Inicialização de eventos interativos
+    window.addEventListener('DOMContentLoaded', () => {
+      const viewport = document.getElementById('lightbox-viewport');
+      if (viewport) {
+        viewport.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          if (e.deltaY < 0) {
+            currentZoom = Math.min(Number((currentZoom + 0.15).toFixed(2)), 4.0);
+          } else {
+            currentZoom = Math.max(Number((currentZoom - 0.15).toFixed(2)), 0.4);
+          }
+          updateTransform();
+        }, { passive: false });
+
+        viewport.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          isDragging = true;
+          startX = e.clientX - panX;
+          startY = e.clientY - panY;
+          viewport.classList.add('grabbing');
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          panX = e.clientX - startX;
+          panY = e.clientY - startY;
+          updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            viewport.classList.remove('grabbing');
+          }
+        });
+
+        viewport.addEventListener('dblclick', () => {
+          if (currentZoom > 1.2) {
+            resetZoom();
+          } else {
+            currentZoom = 1.8;
+            updateTransform();
+          }
+        });
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+      } else if (e.key === '+' || e.key === '=') {
+        zoomIn();
+      } else if (e.key === '-') {
+        zoomOut();
+      } else if (e.key === '0') {
+        resetZoom();
+      }
     });
   </script>
 </body>
