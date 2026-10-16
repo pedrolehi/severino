@@ -104,7 +104,6 @@ class TestReporter:
                 f"| {st} | `{r.scenario_id}` | {r.scenario_name} | `{r.flow_name}` | {len(r.turn_results)} | {r.duration_ms:.0f}ms |"
             )
 
-        # Seções com falhas e detalhes
         if self.failed_scenarios > 0:
             lines.extend(
                 [
@@ -141,10 +140,8 @@ class TestReporter:
         md_path = self.reports_dir / f"{filename_base}.md"
         json_path = self.reports_dir / f"{filename_base}.json"
 
-        # Salva Markdown
         md_path.write_text(self.generate_markdown(), encoding="utf-8")
 
-        # Salva JSON
         serializable_results: list[dict[str, Any]] = []
         for r in self.results:
             serializable_results.append(

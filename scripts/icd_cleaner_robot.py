@@ -33,7 +33,6 @@ from typing import Any
 import sys
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente
 load_dotenv()
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -151,13 +150,9 @@ class ICDAuditAndCleanerRobot:
             page.set_default_timeout(self.timeout_ms)
 
             try:
-                # 1. Login no IAM
                 self._login(page)
-
-                # 2. Entra em Requisição de Serviço
                 self._open_requisicao_de_servico(page)
 
-                # 3. Processa cada chamado individualmente
                 for idx, ticket in enumerate(tickets, start=1):
                     print(f"\n[{idx}/{len(tickets)}] 🎯 Iniciando auditoria do chamado #{ticket.ticket_id} ({ticket.subject or ticket.flow_name})...")
                     res = self._audit_and_cleanup_ticket(page, ticket)
@@ -169,7 +164,6 @@ class ICDAuditAndCleanerRobot:
                 context.close()
                 browser.close()
 
-        # 4. Geração de relatórios e expurgo
         self._generate_reports_and_summary(results)
         return results
 
@@ -236,7 +230,6 @@ class ICDAuditAndCleanerRobot:
         Usa prioritariamente o seletor oficial do Playwright Codegen:
         page.get_by_role("textbox", name="Grupo de Atendimento:")
         """
-        # 1. PRIORIDADE MÁXIMA: Seletor oficial identificado no Playwright Codegen
         try:
             import re
             for name_pattern in ["Grupo de Atendimento:", "Grupo de Atendimento", re.compile(r"Grupo de Atendimento", re.I)]:
@@ -270,7 +263,6 @@ class ICDAuditAndCleanerRobot:
         except Exception:
             pass
 
-        # 2. Fallbacks de inspeção estrutural no DOM via evaluate
         try:
             val = page.evaluate(r"""() => {
                 function cleanCandidate(s) {
@@ -380,7 +372,6 @@ class ICDAuditAndCleanerRobot:
         except Exception:
             pass
 
-        # Fallback Playwright Locator direto
         try:
             for text_lbl in ["Grupo de Atendimento:", "Grupo de Atendimento"]:
                 lbl = page.locator(f"text='{text_lbl}'")
@@ -436,7 +427,6 @@ class ICDAuditAndCleanerRobot:
                     print(f"      ⚠️ Tentativa com {sel} falhou: {e}")
 
         if not saved:
-            # Tenta via get_by_alt_text
             try:
                 alt_btn = page.get_by_alt_text("Salvar Solicitação de Serviço")
                 if alt_btn.count() > 0 and alt_btn.first.is_visible():
@@ -447,7 +437,6 @@ class ICDAuditAndCleanerRobot:
                 pass
 
         if not saved:
-            # Fallback nativo: atalho de teclado do Maximo Ctrl+S
             print("      ⌨️ Acionando atalho de teclado do Maximo (Ctrl+S)...")
             page.keyboard.press("Control+s")
             saved = True
@@ -455,7 +444,6 @@ class ICDAuditAndCleanerRobot:
         page.wait_for_load_state("networkidle")
         time.sleep(2)
 
-        # 2. Trata popup de confirmação (OK / Sim)
         ok_candidates = [
             "button:has-text('OK')",
             "input[type='button'][value='OK']",
@@ -479,9 +467,6 @@ class ICDAuditAndCleanerRobot:
         direct_link = f"https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid={ticket.ticket_id}"
         screenshots: list[dict[str, str]] = []
 
-        # =========================================================================
-        # PASSO 1: Abertura do Chamado e Print Inicial (antes de qualquer alteração)
-        # =========================================================================
         print(f"   [1/3] 🔎 Abrindo solicitação #{ticket.ticket_id}...")
         self._search_ticket(page, ticket.ticket_id)
 
@@ -494,9 +479,6 @@ class ICDAuditAndCleanerRobot:
         })
         print(f"   📸 Screenshot inicial capturado: {initial_shot.name}")
 
-        # =========================================================================
-        # PASSO 2: Monitoramento de Enfileiramento (Polling de até 10 minutos)
-        # =========================================================================
         print(f"   [2/3] ⏳ Monitorando Grupo de Atendimento (timeout máximo: {self.queue_timeout_s}s / {self.queue_timeout_s // 60} min)...")
         enfileirou = False
         grupo_atendimento = ""
@@ -538,9 +520,6 @@ class ICDAuditAndCleanerRobot:
         })
         print(f"   📸 Screenshot de enfileiramento capturado: {queue_shot.name}")
 
-        # =========================================================================
-        # PASSO 3: Exclusão do Chamado de Teste (Reclassificação com até 3 tentativas)
-        # =========================================================================
         print(f"   [3/3] 🗑️ Iniciando exclusão do chamado teste (Reclassificar -> 'Excluir chamado teste')...")
         reclassificado = False
         attempts_used = 1
@@ -551,11 +530,9 @@ class ICDAuditAndCleanerRobot:
             try:
                 print(f"      ▶️ Tentativa de exclusão {attempt}/{self.max_retries}...")
 
-                # Garante que a tela esteja pronta
                 if attempt > 1:
                     self._search_ticket(page, ticket.ticket_id)
 
-                # Abre Menu Detalhes do campo Classificação
                 details_menus = page.get_by_role("img", name="Menu Detalhes")
                 if details_menus.count() >= 5:
                     details_menus.nth(4).click()
@@ -566,26 +543,22 @@ class ICDAuditAndCleanerRobot:
 
                 time.sleep(0.8)
 
-                # Clica em 'Classificar'
                 classify_item = page.get_by_role("menuitem", name="Classificar")
                 if classify_item.count() == 0:
                     classify_item = page.locator("text='Classificar'")
                 classify_item.first.click()
                 time.sleep(1.5)
 
-                # Navega na árvore: 'Solicitações Gerais'
                 sg_tree = page.get_by_role("treeitem", name="Solicitações Gerais")
                 if sg_tree.count() > 0 and sg_tree.first.is_visible():
                     sg_tree.first.click()
                     time.sleep(0.8)
 
-                # 'Chamado Teste'
                 chamado_teste_tree = page.get_by_role("treeitem", name="Chamado Teste")
                 if chamado_teste_tree.count() > 0 and chamado_teste_tree.first.is_visible():
                     chamado_teste_tree.first.click()
                     time.sleep(0.8)
 
-                # 'Excluir chamado teste'
                 excluir_link = page.get_by_role("link", name="Excluir chamado teste")
                 if excluir_link.count() > 0 and excluir_link.first.is_visible():
                     excluir_link.first.click()
@@ -594,7 +567,6 @@ class ICDAuditAndCleanerRobot:
 
                 time.sleep(1)
 
-                # Clica em Salvar Solicitação de Serviço de forma ultra resiliente (botão, seletor e Ctrl+S)
                 self._click_save_ticket(page)
 
                 reclassificado = True
@@ -604,7 +576,6 @@ class ICDAuditAndCleanerRobot:
             except Exception as err:
                 last_error = str(err)
                 print(f"      ⚠️ Falha ao salvar reclassificação na tentativa {attempt}: {last_error}")
-                # Recuperação: descarta tela pendente clicando em Não
                 try:
                     no_btn = page.get_by_role("button", name="Não")
                     if no_btn.count() > 0 and no_btn.first.is_visible():
@@ -613,7 +584,6 @@ class ICDAuditAndCleanerRobot:
                     pass
                 time.sleep(2)
 
-        # Captura Screenshot final 3
         final_shot = SCREENSHOTS_DIR / f"ticket_{ticket.ticket_id}_3_exclusao_{ts}.png"
         page.screenshot(path=str(final_shot), full_page=True)
         screenshots.append({
@@ -650,7 +620,6 @@ class ICDAuditAndCleanerRobot:
         excluidos_count = sum(1 for r in results if r.reclassificado)
         manual_count = sum(1 for r in results if r.manual_action_required)
 
-        # Carrega dados da bateria de testes conversacionais para unificar no relatório HTML
         test_run_data = None
         latest_test_json = find_latest_report()
         if latest_test_json and latest_test_json.exists():
@@ -687,17 +656,14 @@ class ICDAuditAndCleanerRobot:
             ],
         }
 
-        # 1. Salva JSON
         json_report_path.write_text(json.dumps(report_data, indent=2, ensure_ascii=False), encoding="utf-8")
 
-        # 2. Gera Relatório HTML com visual moderno e Lightbox
         try:
             generate_html_report(report_data, html_report_path, keep_history=self.keep_history)
         except Exception as err:
             logger.error(f"Erro ao gerar relatório HTML: {err}", exc_info=True)
             print(f"⚠️ Erro ao gerar relatório HTML: {err}")
 
-        # 3. Exibe resumo no terminal
         print("\n" + "=" * 80)
         print("📊 RESUMO FINAL DA AUDITORIA NO ICD:")
         print(f" • Total de Chamados Processados:  {len(results)}")

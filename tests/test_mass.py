@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 from typing import Any
 
-# Tabela oficial de siglas e CNPJs de unidades do Senac SP
 SENAC_UNIDADES_CNPJ: dict[str, str] = {
     "CAS": "03.709.814/0064-71",  # Centro Administrativo Senac
     "GEF": "03.709.814/0001-98",  # Gerência Financeira
@@ -71,16 +70,13 @@ def get_test_user(require_full_access: bool = False) -> dict[str, Any]:
     }
 
 
-# Dados para fluxos financeiros (GEF)
 GEF_TEST_DATA = {
-    # Segunda via de NF: Unidade CAS do Senac SP
     "sigla_unidade": "CAS",
     "cnpj_senac": SENAC_UNIDADES_CNPJ["CAS"],
     "cnpj_cliente": os.getenv("TEST_NF_CNPJ_CLIENTE", "03.709.814/0064-71"),
     "mes_ano": os.getenv("TEST_NF_MES_ANO", "02/2024"),
     "ano": os.getenv("TEST_NF_ANO", "2024"),
     "mes": os.getenv("TEST_NF_MES", "02"),
-    # Centro de custo
     "origem": "GD",
     "modalidade": "APERFEIÇOAMENTO",
     "curso": "Administração",

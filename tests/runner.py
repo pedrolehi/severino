@@ -35,7 +35,6 @@ def _extract_ticket_id(text: str) -> str | None:
         ):
             return val
 
-    # Padrão secundário para códigos com dígitos ou prefixo SNC/MOCK
     for candidate in re.findall(
         r"(?:protocolo|chamado|ticket)[\s:]+([A-Za-z0-9_\-\.]+)", text, re.IGNORECASE
     ):
@@ -89,7 +88,6 @@ class FlowTestRunner:
         created_tickets: list[CreatedTicket] = []
         all_passed = True
 
-        # Obtém o colaborador base (Pedro Muniz por padrão; Flavio Machado se require_acesso_total=True)
         require_full = bool(scenario.metadata.get("require_acesso_total", False))
         base_user = get_test_user(require_full_access=require_full)
         merged_user = dict(base_user)
@@ -135,7 +133,6 @@ class FlowTestRunner:
 
             errors: list[str] = []
 
-            # Validações esperadas
             exp = turn.expected
             if exp.active_flow is not None and active_flow != exp.active_flow:
                 errors.append(f"Esperava active_flow='{exp.active_flow}', mas recebeu '{active_flow}'")
@@ -163,7 +160,6 @@ class FlowTestRunner:
                         f"Texto não contém nenhum dos termos esperados {exp.text_contains_any}. Resposta recebida: {output_text}"
                     )
 
-            # Detecção de mensagens de erro explícitas da API de abertura de chamado
             lower_output = output_text.casefold()
             is_abertura_scenario = (
                 "abertura_chamado" in scenario.flow_name.casefold()
@@ -175,7 +171,6 @@ class FlowTestRunner:
             if "não abri o chamado" in lower_output or "temporariamente indisponível" in lower_output:
                 errors.append(f"Fluxo retornou erro/recusa na abertura do chamado: '{output_text}'")
 
-            # Captura de ticket gerado
             ticket: CreatedTicket | None = None
             raw_ticket_id = _extract_ticket_id(output_text)
             if raw_ticket_id:

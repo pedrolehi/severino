@@ -7,7 +7,6 @@ import os
 import sys
 from pathlib import Path
 
-# Garante raiz do repositório no sys.path
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -94,18 +93,15 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
 
-    # Limpeza prévia de relatórios se solicitado
     if args.clean:
         from scripts.clean_reports import clean
         clean()
 
-    # Exportação de dataset
     if args.export_dataset:
         save_scenarios_to_json(ALL_SCENARIOS, args.export_dataset)
         print(f"✅ Sucesso: {len(ALL_SCENARIOS)} cenários exportados para '{args.export_dataset}'.")
         return 0
 
-    # Carregamento de cenários: a partir de arquivo JSON ou do catálogo interno
     if args.dataset:
         try:
             active_scenarios = load_scenarios_from_json(args.dataset)
@@ -127,7 +123,6 @@ def main() -> int:
         print(f"Total: {len(active_scenarios)} cenários cadastrados.\n")
         return 0
 
-    # Configuração de mock vs backend real
     prod_orchestrate_url = "https://prod-senac-orquestrator-chatbotx.ocp-senac-11f45abbd458185944dd806416f75c34-0000.us-south.containers.appdomain.cloud/v2"
     if args.prod:
         os.environ["SENAC_ORCHESTRATE_URL"] = prod_orchestrate_url
