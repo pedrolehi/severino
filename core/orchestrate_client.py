@@ -39,7 +39,6 @@ def _extract_error_detail(
     parts: list[str] = []
 
     if isinstance(payload, dict):
-        # 1. Tenta identificar status code interno da API ou gateway
         for key in ("status", "statusCode", "CODIGO", "status_code"):
             val = payload.get(key)
             if val is not None and str(val).isdigit():
@@ -48,7 +47,6 @@ def _extract_error_detail(
                     effective_status = parsed_val
                     break
 
-        # 2. Coleta mensagem primária de erro
         primary_msg = None
         for key in ("error", "message", "MENSAGEM", "mensagem", "detail", "details", "WSRETURNDETAIL"):
             val = payload.get(key)
@@ -65,7 +63,6 @@ def _extract_error_detail(
         if primary_msg:
             parts.append(primary_msg)
 
-        # 3. Coleta campos 'data' / 'DADOS' / 'details' onde residem respostas das APIs externas do Senac/Maximo
         for extra_key in ("data", "DADOS", "details", "raw"):
             extra = payload.get(extra_key)
             if not extra:
@@ -488,12 +485,10 @@ class OrchestrateClient:
             "SNCINSCRICAO": "",
         }
 
-        # Specs apenas se preenchidas e com itens
         specs = payload.get("TICKETSPECS") or payload.get("ticketSpecs")
         if isinstance(specs, list) and len(specs) > 0:
             clean_payload["TICKETSPECS"] = specs
 
-        # Anexo apenas se preenchido
         anexo = payload.get("anexo")
         if anexo and isinstance(anexo, (dict, str)) and bool(anexo):
             clean_payload["anexo"] = anexo

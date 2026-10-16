@@ -45,7 +45,6 @@ from core.config import (
 
 logger = logging.getLogger("core.llm")
 
-# Cache de token IAM da IBM
 _ibm_token_cache: dict[str, Any] = {"token": None, "expires_at": 0}
 
 
@@ -96,7 +95,6 @@ def _extract_json_from_text(text: str) -> Any:
     if not text:
         return None
 
-    # Tenta remover blocos de código markdown ```json ... ```
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
     if match:
         candidate = match.group(1).strip()
@@ -105,7 +103,6 @@ def _extract_json_from_text(text: str) -> Any:
         except Exception:
             pass
 
-    # Tenta extrair entre o primeiro '{' e o último '}'
     first_brace = text.find("{")
     last_brace = text.rfind("}")
     if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
@@ -115,7 +112,6 @@ def _extract_json_from_text(text: str) -> Any:
         except Exception:
             pass
 
-    # Tenta parse direto
     try:
         return json.loads(text)
     except Exception:
@@ -173,11 +169,9 @@ class StructuredOutputRunnable:
         except Exception as exc:
             logger.warning("Falha ao invocar LLM para structured output: %s", exc)
 
-        # Fallback gracioso para schemas conhecidos
         schema_name = getattr(self.schema, "__name__", "")
         if schema_name == "RouteDecision":
             from agents.router_agent.models import Route, RouteDecision
-            # Fallback seguro: RAG ou FALLBACK
             return RouteDecision(route=Route.FALLBACK, confidence=0.0)
 
         if schema_name == "JudgeVerdictModel":
@@ -336,7 +330,6 @@ class WatsonxChatModel(BaseChatModel):
         except Exception as exc:
             logger.warning("Falha no endpoint /ml/v1/text/chat do Watsonx: %s", exc)
 
-        # Fallback para endpoint de text/generation
         try:
             gen_url = f"{self.base_url.rstrip('/')}/ml/v1/text/generation?version={self.api_version}"
             prompt_lines = [
@@ -427,7 +420,6 @@ class WatsonxChatModel(BaseChatModel):
         except Exception as exc:
             logger.warning("Falha em stream Watsonx: %s. Utilizando invoke não-stream...", exc)
 
-        # Fallback: executa geração normal e yield como um chunk
         full_res = self._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
         for gen in full_res.generations:
             text = gen.message.content if isinstance(gen.message.content, str) else str(gen.message.content)
@@ -673,7 +665,6 @@ def get_llm() -> BaseChatModel:
     """
     provider = LLM_PROVIDER
 
-    # 1) Tentativa com langchain_ibm se disponível
     if provider in {"ibm", "watsonx"} and IBM_API_KEY and IBM_PROJECT_ID:
         try:
             from langchain_ibm import ChatWatsonx
@@ -696,7 +687,6 @@ def get_llm() -> BaseChatModel:
                 exc,
             )
 
-        # 2) WatsonxChatModel nativo
         return WatsonxChatModel(
             model_name=WATSONX_LLM_MODEL,
             project_id=IBM_PROJECT_ID,
@@ -705,7 +695,6 @@ def get_llm() -> BaseChatModel:
             api_version=IBM_API_VERSION,
         )
 
-    # 3) Porta / Endpoint Interno JEV (com fallback para Watsonx se credenciais existirem)
     if INTERNAL_LLM_BASE_URL or provider in {"internal", "openjev"}:
         fallback_target: BaseChatModel | None = None
         if IBM_API_KEY and IBM_PROJECT_ID:
@@ -728,12 +717,10 @@ def get_llm() -> BaseChatModel:
             fallback_model=fallback_target,
         )
 
-    # 4) Fallback seguro
     logger.warning(
         "Nenhum provedor de LLM externo configurado (IBM_API_KEY ausente). Usando FallbackChatModel."
     )
     return FallbackChatModel()
 
 
-# Instância global do LLM para todo o projeto
 llm = get_llm()

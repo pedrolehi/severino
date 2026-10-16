@@ -22,8 +22,7 @@ from typing import Any
 def prune_old_reports(reports_dir: Path, keep: int = 10) -> list[Path]:
     """Mantém apenas os 'keep' relatórios mais recentes de cada tipo e remove os mais antigos."""
     deleted_files: list[Path] = []
-    
-    # 1. Limpeza de relatórios HTML de auditoria do ICD
+
     html_files = sorted(reports_dir.glob("icd_audit_*.html"), key=os.path.getmtime, reverse=True)
     for old_file in html_files[keep:]:
         try:
@@ -32,7 +31,6 @@ def prune_old_reports(reports_dir: Path, keep: int = 10) -> list[Path]:
         except Exception:
             pass
 
-    # 2. Limpeza de relatórios JSON de auditoria do ICD
     json_files = sorted(reports_dir.glob("icd_cleanup_*.json"), key=os.path.getmtime, reverse=True)
     for old_file in json_files[keep:]:
         try:
@@ -41,8 +39,6 @@ def prune_old_reports(reports_dir: Path, keep: int = 10) -> list[Path]:
         except Exception:
             pass
 
-    # 3. Limpeza de screenshots órfãos mais antigos que não pertencem aos relatórios mantidos
-    # Coleta todas as imagens referenciadas nos relatórios HTML sobreviventes
     surviving_images: set[str] = set()
     surviving_htmls = sorted(reports_dir.glob("icd_audit_*.html"), key=os.path.getmtime, reverse=True)[:keep]
     for h in surviving_htmls:
@@ -60,7 +56,6 @@ def prune_old_reports(reports_dir: Path, keep: int = 10) -> list[Path]:
     screenshots_dir = reports_dir / "screenshots"
     if screenshots_dir.is_dir() and surviving_images:
         all_shots = sorted(screenshots_dir.glob("*.png"), key=os.path.getmtime, reverse=True)
-        # Mantém até 60 screenshots mais recentes no mínimo, e apaga os que não estão nos relatórios ativos
         for shot in all_shots[60:]:
             if shot.name not in surviving_images:
                 try:
@@ -106,7 +101,6 @@ def generate_html_report(
     manuais = report_data.get("manual_count", 0)
     items = report_data.get("items", [])
 
-    # Carrega dados da bateria de testes se disponíveis
     test_run = report_data.get("test_run")
     if not test_run and reports_dir.is_dir():
         test_run_files = sorted(reports_dir.glob("test_run_*.json"), key=os.path.getmtime, reverse=True)
@@ -128,7 +122,6 @@ def generate_html_report(
         test_rate = round((test_passed / test_total * 100.0), 1) if test_total > 0 else 0.0
         test_results = test_run.get("results", [])
 
-        # Resumo centralizado das métricas dos testes (sem despejar erros detalhados)
         test_summary_html = f"""
     <div class="test-summary-card">
       <div class="test-summary-header">
@@ -162,10 +155,8 @@ def generate_html_report(
     </div>
 """
 
-        # Mapeia itens de auditoria por ticket_id
         items_by_ticket = {str(it.get("ticket_id", "")).strip(): it for it in items}
 
-        # Matriz dos cenários classificando Chamados vs Consultas e status de encerramento
         rows_html = ""
         for idx, sc in enumerate(test_results, 1):
             sc_name = html.escape(sc.get("scenario_name") or sc.get("scenario_id") or f"Cenário {idx}")
@@ -237,7 +228,6 @@ def generate_html_report(
     </div>
 """
 
-    # Banner de Garantia de Encerramento dos Chamados
     if total > 0 and excluidos_sucesso == total:
         closure_banner_html = f"""
     <div class="closure-banner">
@@ -263,7 +253,6 @@ def generate_html_report(
     </div>
 """
 
-    # HTML Template com CSS Vanilla embutido
     html_content = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -926,7 +915,6 @@ def generate_html_report(
         manual = item.get("manual_action_required", False)
         direct_link = item.get("direct_link") or f"https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr&uniqueid={ticket_id}"
 
-        # Status badge do enfileiramento
         if enfileirou:
             enfileiramento_badge = f"""<span class="badge-status success">✓ Enfileirado ({wait_seconds}s)</span>"""
             grupo_display = grupo or "Grupo Identificado"
@@ -934,7 +922,6 @@ def generate_html_report(
             enfileiramento_badge = f"""<span class="badge-status warning">⚠ Não Enfileirou (Timeout 4m)</span>"""
             grupo_display = '<span style="color: #f59e0b;">(Vazio / Não roteado)</span>'
 
-        # Status badge da exclusão
         if reclassificado:
             exclusao_badge = f"""<span class="badge-status success">✓ Excluído (Chamado Teste)</span>"""
         elif manual:
@@ -942,7 +929,6 @@ def generate_html_report(
         else:
             exclusao_badge = f"""<span class="badge-status warning">Em Aberto</span>"""
 
-        # Galeria de Screenshots
         shots_html = ""
         screenshots = item.get("screenshots", [])
         if screenshots:
@@ -951,7 +937,6 @@ def generate_html_report(
                 shot_path = s.get("path", "")
                 caption = s.get("caption", "Evidência")
                 stage = s.get("stage", "Print")
-                # Caminho relativo para exibição no HTML
                 rel_path = shot_path
                 if "reports/" in rel_path:
                     rel_path = rel_path.split("reports/", 1)[1]
@@ -1195,8 +1180,7 @@ def generate_html_report(
 """
 
     output_path.write_text(html_content, encoding="utf-8")
-    
-    # Aplica política de retenção
+
     prune_old_reports(reports_dir, keep=keep_history)
 
     return output_path

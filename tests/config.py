@@ -10,7 +10,6 @@ REPORTS_DIR = BASE_DIR / "reports"
 
 from tests.test_mass import get_test_user
 
-# Usuário padrão dos testes conversacionais (alinhado ao ambiente de homologação ICD e RM)
 TEST_USER_INFO = get_test_user()
 
 ASSISTANT_ID = "intranet"

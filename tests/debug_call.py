@@ -22,12 +22,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Garante raiz do repositório no sys.path
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-# Carrega variáveis do .env se existir
 from dotenv import load_dotenv
 
 load_dotenv(BASE_DIR / ".env")
@@ -107,7 +105,6 @@ def execute_http_call(
 
     _print_divider("-")
 
-    # Diagnóstico específico de erro
     if resp.status_code >= 400 or (isinstance(payload, dict) and payload.get("status") not in (None, 200, "200")):
         print("🔍 ANÁLISE DE DIAGNÓSTICO DO ERRO:")
         if isinstance(payload, dict):
@@ -195,7 +192,6 @@ def debug_ticket_gep(base_url: str, flow_type: str = "crachas") -> None:
         subtema=cfg["subtema"],
     )
 
-    # Se classify-icd trouxe metadados, injeta
     if classify_res.get("ok"):
         pl = classify_res.get("payload") or {}
         data = pl.get("data")
@@ -292,7 +288,6 @@ def main() -> int:
     elif args.all:
         debug_all(base_url)
     else:
-        # Default: se nenhum argumento for passado, executa debug do fluxo crachás
         print("ℹ️ Nenhum argumento específico informado. Executando debug do fluxo 'crachas'...")
         debug_ticket_gep(base_url, "crachas")
 

@@ -24,7 +24,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Garante raiz do repositório no sys.path
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -42,12 +41,7 @@ except ImportError:
     MongoClient = None  # type: ignore
 
 
-# -------------------------------------------------------------------------
-# Catálogo Canônico com todas as pontas dos fluxos corporativos
-# -------------------------------------------------------------------------
-
 CANONICAL_SCENARIOS: list[Scenario] = [
-    # --- GEF: Cancelamento Financeiro (Revisão de Cálculo) ---
     Scenario(
         id="gef_cancelamento_financeiro_revisao_calculo",
         name="GEF - Cancelamento Financeiro (Revisão de Cálculo)",
@@ -126,7 +120,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEF: Cancelamento Financeiro (Não Processados Individual) ---
     Scenario(
         id="gef_cancelamento_financeiro_nao_processados",
         name="GEF - Cancelamento Financeiro (Não Processados)",
@@ -211,7 +204,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEF: Segunda Via de Nota Fiscal ---
     Scenario(
         id="gef_segunda_via_nota_fiscal",
         name="GEF - Segunda Via de Nota Fiscal",
@@ -267,7 +259,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEF: Centro de Custo (Consulta) ---
     Scenario(
         id="gef_centro_de_custo_consulta",
         name="GEF - Centro de Custo (Consulta)",
@@ -336,7 +327,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEF: Centro de Custo (Solicitar Abertura) ---
     Scenario(
         id="gef_centro_de_custo_solicitar",
         name="GEF - Centro de Custo (Solicitar Abertura)",
@@ -364,7 +354,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEF: Relatórios Orçamentários ---
     Scenario(
         id="gef_relatorios_orcamentarios",
         name="GEF - Relatórios Orçamentários",
@@ -395,7 +384,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEF: Gestão de Pagamentos ---
     Scenario(
         id="gef_gestao_pagamentos",
         name="GEF - Gestão de Pagamentos",
@@ -446,7 +434,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Crachás (Provisório) ---
     Scenario(
         id="gep_cracha_provisorio",
         name="GEP - Crachá Provisório",
@@ -496,7 +483,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Crachás (Segunda Via) ---
     Scenario(
         id="gep_segunda_via_cracha",
         name="GEP - Segunda Via de Crachá",
@@ -546,7 +532,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Espelho de Ponto ---
     Scenario(
         id="gep_espelho_ponto",
         name="GEP - Consulta Espelho de Ponto",
@@ -573,7 +558,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Ajuste de Batida de Ponto ---
     Scenario(
         id="gep_ajuste_ponto",
         name="GEP - Ajuste de Batida de Ponto",
@@ -633,7 +617,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Benefícios (Transporte) ---
     Scenario(
         id="gep_beneficios_transporte",
         name="GEP - Benefícios (Vale Transporte)",
@@ -674,7 +657,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Carta Convite ---
     Scenario(
         id="gep_carta_convite",
         name="GEP - Carta Convite para Evento",
@@ -725,7 +707,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEP: Saldo de Horas ---
     Scenario(
         id="gep_saldo_horas",
         name="GEP - Saldo de Banco de Horas",
@@ -743,7 +724,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GEDUC: Portarias MEC / Atualização Cadastral de Concluintes ---
     Scenario(
         id="geduc_atualizacao_concluintes",
         name="GEDUC - Atualização de Concluintes na SEE/SP",
@@ -787,7 +767,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GCR: Chamado Geral ---
     Scenario(
         id="gcr_chamado_geral",
         name="GCR - Abertura de Chamado Geral",
@@ -828,7 +807,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
-    # --- GPG: Documentos (Informe de Rendimentos / DIRF) ---
     Scenario(
         id="gpg_informe_rendimentos",
         name="GPG - Informe de Rendimentos IRPF",
@@ -862,10 +840,6 @@ CANONICAL_SCENARIOS: list[Scenario] = [
 ]
 
 
-# -------------------------------------------------------------------------
-# Motor de Agregação MongoDB
-# -------------------------------------------------------------------------
-
 class MongoDatasetAggregator:
     """Extrai conversas com sucesso do MongoDB e mescla com a base canônica."""
 
@@ -888,7 +862,6 @@ class MongoDatasetAggregator:
                 tlsAllowInvalidCertificates=True,
                 serverSelectionTimeoutMS=5000,
             )
-            # Ping de teste
             self.client.admin.command("ping")
             print("✅ Conectado ao MongoDB com sucesso.")
             return True
@@ -949,7 +922,6 @@ class MongoDatasetAggregator:
         ctx = doc.get("context") or {}
         active_flow = ctx.get("active_flow") or doc.get("active_flow") or "flow_indefinido"
 
-        # Extrai usuário
         ui = ctx.get("user_info") or {}
         dados = ui.get("DADOS") if isinstance(ui, dict) else {}
         user_info = {
@@ -960,7 +932,6 @@ class MongoDatasetAggregator:
             "unidade": str(dados.get("UNIDADE") or "CAS"),
         }
 
-        # Extrai mensagens
         messages = doc.get("messages") or []
         turns: list[Turn] = []
 
@@ -994,7 +965,6 @@ class MongoDatasetAggregator:
         if not turns:
             return None
 
-        # Marca o último turno com is_done se o doc teve status concluído
         turns[-1].expected.is_done = True
 
         session_id = str(doc.get("sessionId") or doc.get("_id") or "sessao")
@@ -1026,17 +996,12 @@ class MongoDatasetAggregator:
 
         dataset: list[Scenario] = []
 
-        # Adiciona cenários do MongoDB
         dataset.extend(mongo_scenarios)
 
-        # Mescla com os canônicos garantindo que todos os temas existam
         if include_canonical:
-            existing_flows = {s.flow_name for s in dataset}
             for can in CANONICAL_SCENARIOS:
-                # Se não temos no dataset ou queremos garantir a massa completa
                 dataset.append(can)
 
-        # Filtro de tema se solicitado
         if theme_filter:
             tf = theme_filter.lower()
             dataset = [
@@ -1044,7 +1009,6 @@ class MongoDatasetAggregator:
                 if tf in s.flow_name.lower() or tf in s.id.lower() or tf in s.name.lower()
             ]
 
-        # Desduplica por ID
         seen_ids = set()
         deduped = []
         for s in dataset:
@@ -1054,10 +1018,6 @@ class MongoDatasetAggregator:
 
         return deduped
 
-
-# -------------------------------------------------------------------------
-# CLI & Exportação
-# -------------------------------------------------------------------------
 
 def print_summary_table(scenarios: list[Scenario]) -> None:
     print("\n" + "=" * 90)

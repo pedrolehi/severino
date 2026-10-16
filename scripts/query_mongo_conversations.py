@@ -48,7 +48,6 @@ def _extract_user_from_dict(doc: dict[str, Any]) -> dict[str, Any] | None:
     """Tenta extrair dados estruturados de colaborador de qualquer documento/contexto."""
     candidates = []
 
-    # 1. Procura em context.user_info
     ctx = doc.get("context") or {}
     if isinstance(ctx, dict):
         ui = ctx.get("user_info") or {}
@@ -57,7 +56,6 @@ def _extract_user_from_dict(doc: dict[str, Any]) -> dict[str, Any] | None:
             if isinstance(dados, dict):
                 candidates.append(dados)
 
-    # 2. Procura em bot.context.user_info
     bot = doc.get("bot") or {}
     if isinstance(bot, dict):
         bot_ctx = bot.get("context") or {}
@@ -68,7 +66,6 @@ def _extract_user_from_dict(doc: dict[str, Any]) -> dict[str, Any] | None:
                 if isinstance(dados, dict):
                     candidates.append(dados)
 
-    # 3. Procura no próprio doc
     candidates.append(doc)
 
     for item in candidates:
@@ -122,7 +119,6 @@ def search_pedro_or_user(client: MongoClient, query: str = "pedro") -> list[dict
     print(f"\n🔍 Buscando usuário correspondente a '{query}' em todas as coleções...")
     results = []
 
-    # Bancos a verificar
     db_names = ["orchestrate", "vectory"]
     try:
         available_dbs = client.list_database_names()
@@ -144,7 +140,6 @@ def search_pedro_or_user(client: MongoClient, query: str = "pedro") -> list[dict
         for col_name in col_names:
             col = db[col_name]
             try:
-                # Busca por email, nome ou texto
                 filter_q = {
                     "$or": [
                         {"context.user_info.DADOS.EMAIL": regex},
@@ -224,7 +219,6 @@ def search_successful_conversations(
                 break
             col = db[col_name]
             try:
-                # Procura documentos com o tema
                 cursor = col.find(
                     {
                         "$or": [
@@ -238,7 +232,6 @@ def search_successful_conversations(
                 for doc in cursor:
                     user_info = _extract_user_from_dict(doc)
 
-                    # Extrai turnos de mensagens
                     turns = []
                     messages = doc.get("messages") or []
                     if isinstance(messages, list) and messages:
@@ -253,7 +246,6 @@ def search_successful_conversations(
                         if bot_out:
                             turns.append({"sender": "assistant", "text": str(bot_out)})
 
-                    # Verifica se teve sucesso ou gerou protocolo
                     full_text = " ".join(t.get("text") or "" for t in turns)
                     protocol = _find_ticket_protocol(full_text)
 
@@ -370,7 +362,6 @@ def main() -> int:
                 print(f"[{r.get('collection')}] {r.get('snippet')}")
         return 0
 
-    # Busca conversas por tema
     theme_to_search = args.theme
     conversations = search_successful_conversations(client, theme_keyword=theme_to_search)
 
