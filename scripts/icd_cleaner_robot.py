@@ -18,20 +18,26 @@ Fluxo Completo:
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import logging
 import os
 import sys
 import time
-
-logger = logging.getLogger("icd_cleaner_robot")
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
-import sys
 from dotenv import load_dotenv
+
+try:
+    from playwright.sync_api import Error as PlaywrightError
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None
+    PlaywrightError = Exception
+
+logger = logging.getLogger("icd_cleaner_robot")
 
 load_dotenv()
 
@@ -42,10 +48,22 @@ if str(ROOT_DIR) not in sys.path:
 REPORTS_DIR = ROOT_DIR / "reports"
 SCREENSHOTS_DIR = REPORTS_DIR / "screenshots"
 
+EXCLUIR_LABEL = "Excluir chamado teste"
+MAXIMO_FIELD_LABELS = {
+    "Solicitante", "Proprietário", "Status", "Anexos", "Tipo da Requisição",
+    "Origem", "Meio de abertura", "Duplicado pai", "Grupo de Atendimento",
+}
+
+
+def _is_valid_grupo(value: str) -> bool:
+    if len(value) < 3 or value.endswith(":"):
+        return False
+    return value not in MAXIMO_FIELD_LABELS
+
 try:
-    from scripts.icd_html_reporter import generate_html_report, prune_old_reports
+    from scripts.icd_html_reporter import generate_html_report
 except ModuleNotFoundError:
-    from icd_html_reporter import generate_html_report, prune_old_reports
+    from icd_html_reporter import generate_html_report
 
 
 @dataclass
@@ -106,9 +124,7 @@ class ICDAuditAndCleanerRobot:
 
     def run(self, tickets: list[TicketTarget]) -> list[TicketAuditResult]:
         """Executa o ciclo completo de login, verificação de enfileiramento, exclusão e relatório."""
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError:
+        if sync_playwright is None:
             print("❌ Playwright não está instalado.")
             print("Instale executando:")
             print("    pip install playwright")
@@ -121,7 +137,6 @@ class ICDAuditAndCleanerRobot:
             if not sys.stdin.isatty():
                 return []
             self.username = input("Informe o Usuário/Chapa do ICD: ").strip()
-            import getpass
             self.password = getpass.getpass("Informe a Senha do ICD: ").strip()
 
         print("=" * 80)
@@ -159,6 +174,7 @@ class ICDAuditAndCleanerRobot:
                     results.append(res)
 
             except Exception as exc:
+                logger.exception("Erro fatal na sessão do navegador")
                 print(f"💥 Erro fatal na sessão do navegador: {exc}")
             finally:
                 context.close()
@@ -225,173 +241,35 @@ class ICDAuditAndCleanerRobot:
             time.sleep(1)
 
     def _get_grupo_atendimento(self, page) -> str:
-        """Tenta extrair o valor legítimo do campo 'Grupo de Atendimento' na tela do Maximo.
+        """Lê só o valor do input 'Grupo de Atendimento'.
 
-        Usa prioritariamente o seletor oficial do Playwright Codegen:
-        page.get_by_role("textbox", name="Grupo de Atendimento:")
+        Busca por texto da página pega o rótulo vizinho ('Proprietário:') quando o campo está vazio.
         """
-        try:
-            import re
-            for name_pattern in ["Grupo de Atendimento:", "Grupo de Atendimento", re.compile(r"Grupo de Atendimento", re.I)]:
-                tb = page.get_by_role("textbox", name=name_pattern)
-                if tb.count() > 0:
-                    raw = ""
-                    try:
-                        raw = tb.first.input_value().strip()
-                    except Exception:
-                        pass
-                    if not raw:
-                        try:
-                            raw = (tb.first.get_attribute("value") or "").strip()
-                        except Exception:
-                            pass
-                    if not raw:
-                        try:
-                            raw = (tb.first.inner_text() or "").strip()
-                        except Exception:
-                            pass
-                    if not raw:
-                        try:
-                            raw = (tb.first.text_content() or "").strip()
-                        except Exception:
-                            pass
-
-                    if raw and raw not in ("-", "&nbsp;", "null") and "=" not in raw and "clientAreaId" not in raw and len(raw) >= 3:
-                        cleaned = re.sub(r"^Grupo\s+de\s+Atendimento\s*:?\s*", "", raw, flags=re.I).strip()
-                        if cleaned and len(cleaned) >= 3:
-                            return cleaned
-        except Exception:
-            pass
-
-        try:
-            val = page.evaluate(r"""() => {
-                function cleanCandidate(s) {
-                    if (!s || typeof s !== 'string') return '';
-                    let str = s.trim();
-                    str = str.replace(/^Grupo\s+de\s+Atendimento\s*:?\s*/i, '').trim();
-                    const lines = str.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
-                    if (lines.length > 0) {
-                        str = lines[0];
-                    }
-                    return str.trim();
-                }
-
-                function isValidGroup(raw) {
-                    const s = cleanCandidate(raw);
-                    if (!s || s === '-' || s === '&nbsp;' || s === 'null' || s === 'undefined') return false;
-                    if (s.includes('=') || s.includes(';') || s.includes('{') || s.includes('}') || s.includes('<') || s.includes('>')) return false;
-                    if (/clientAreaId|script|function|style|var\s|let\s|const\s/i.test(s)) return false;
-                    if (/^(Solicitante|Proprietário|Status|Anexos|Tipo da Requisição|Origem|Meio de abertura|Duplicado pai)$/i.test(s)) return false;
-                    if (s.length < 3 || !/[a-zA-Z]/.test(s)) return false;
-                    return true;
-                }
-
-                function getCleanText(node) {
-                    if (!node) return '';
-                    if (node.value && typeof node.value === 'string' && node.value.trim()) {
-                        return node.value.trim();
-                    }
-                    const inp = node.querySelector ? node.querySelector('input, textarea, select') : null;
-                    if (inp && inp.value && inp.value.trim()) {
-                        return inp.value.trim();
-                    }
-                    try {
-                        const clone = node.cloneNode(true);
-                        clone.querySelectorAll('script, style, noscript, svg, input[type="hidden"]').forEach(el => el.remove());
-                        return (clone.innerText || clone.textContent || '').trim();
-                    } catch (e) {
-                        return (node.innerText || node.textContent || '').trim();
-                    }
-                }
-
-                // 1. Label com atributo 'for' apontando para o id do elemento
-                for (const lbl of document.querySelectorAll('label, span.text, td')) {
-                    const txt = (lbl.innerText || lbl.textContent || '').trim();
-                    if (/^Grupo de Atendimento\s*:?$/i.test(txt)) {
-                        const forId = lbl.getAttribute('for') || lbl.htmlFor;
-                        if (forId) {
-                            const target = document.getElementById(forId);
-                            if (target) {
-                                const raw = getCleanText(target);
-                                if (isValidGroup(raw)) return cleanCandidate(raw);
-                            }
-                        }
-                    }
-                }
-
-                // 2. Tabela do Maximo (célula de label e célula de valor na linha de baixo ou ao lado)
-                const allCells = Array.from(document.querySelectorAll('td, th, span'));
-                for (const cell of allCells) {
-                    const cellTxt = (cell.innerText || cell.textContent || '').trim();
-                    if (/^Grupo de Atendimento\s*:?$/i.test(cellTxt) || (cellTxt.startsWith('Grupo de Atendimento') && cellTxt.length < 35)) {
-                        const td = cell.closest('td') || cell;
-                        const tr = td.closest('tr');
-                        if (tr) {
-                            const colIdx = Array.from(tr.children).indexOf(td);
-                            const nextRow = tr.nextElementSibling;
-                            if (nextRow && nextRow.children && nextRow.children[colIdx]) {
-                                const raw = getCleanText(nextRow.children[colIdx]);
-                                if (isValidGroup(raw)) return cleanCandidate(raw);
-                            }
-                            if (td.nextElementSibling) {
-                                const raw = getCleanText(td.nextElementSibling);
-                                if (isValidGroup(raw)) return cleanCandidate(raw);
-                            }
-                        }
-                    }
-                }
-
-                // 3. Texto na página entre 'Grupo de Atendimento:' e 'Proprietário'
-                const fullText = document.body ? (document.body.innerText || '') : '';
-                const matchBetween = fullText.match(/Grupo de Atendimento\s*:?\s*([^\n\r]+?)\s*(?:Proprietário|Meio de abertura|Anexos|$)/i);
-                if (matchBetween && matchBetween[1]) {
-                    const raw = matchBetween[1].trim();
-                    if (isValidGroup(raw)) return cleanCandidate(raw);
-                }
-
-                // 4. Inputs com id, title, name ou aria contendo 'ownergroup' ou 'grupo'
-                for (const inp of document.querySelectorAll('input, select, textarea')) {
-                    const attrStr = ((inp.id || '') + ' ' + (inp.name || '') + ' ' + (inp.title || '') + ' ' + (inp.getAttribute('aria-label') || '')).toLowerCase();
-                    if (attrStr.includes('ownergroup') || attrStr.includes('grupo de atendimento')) {
-                        const val = (inp.value || '').trim();
-                        if (isValidGroup(val)) return cleanCandidate(val);
-                    }
-                }
-
-                // 5. Qualquer elemento com ID contendo ownergroup
-                for (const el of document.querySelectorAll('[id*="ownergroup" i], [id*="OWNERGROUP"]')) {
-                    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
-                    const raw = getCleanText(el);
-                    if (isValidGroup(raw)) return cleanCandidate(raw);
-                }
-
-                return '';
-            }""")
-            if val and isinstance(val, str) and val.strip():
-                return val.strip()
-        except Exception:
-            pass
-
-        try:
-            for text_lbl in ["Grupo de Atendimento:", "Grupo de Atendimento"]:
-                lbl = page.locator(f"text='{text_lbl}'")
-                if lbl.count() > 0:
-                    td = lbl.first.locator("xpath=ancestor::td[1]")
-                    if td.count() > 0:
-                        val_td = td.locator("xpath=../following-sibling::tr[1]/td[count(current()/preceding-sibling::td) + 1]")
-                        if val_td.count() > 0:
-                            inp = val_td.locator("input")
-                            if inp.count() > 0:
-                                v = inp.first.input_value().strip()
-                                if v and len(v) >= 3 and "=" not in v:
-                                    return v
-                            txt = val_td.first.inner_text().strip()
-                            if txt and len(txt) >= 3 and "=" not in txt and "clientAreaId" not in txt:
-                                return txt
-        except Exception:
-            pass
-
+        candidates = [
+            page.get_by_role("textbox", name="Grupo de Atendimento:"),
+            page.locator("input[id*='ownergroup' i]"),
+        ]
+        for loc in candidates:
+            if loc.count() == 0:
+                continue
+            try:
+                value = (loc.first.input_value() or "").strip()
+            except PlaywrightError:
+                value = ""
+            if _is_valid_grupo(value):
+                return value
         return ""
+
+    def _is_reclassificado(self, page) -> bool:
+        """Confere na tela recarregada se a classificação virou 'Excluir chamado teste'."""
+        return page.evaluate(
+            """(alvo) => {
+                const textos = [document.body ? document.body.innerText || '' : ''];
+                document.querySelectorAll('input, textarea').forEach(el => textos.push(el.value || ''));
+                return textos.some(t => t.includes(alvo));
+            }""",
+            EXCLUIR_LABEL,
+        )
 
     def _click_save_ticket(self, page) -> bool:
         """Aciona o botão Salvar da Solicitação de Serviço no Maximo com máxima resiliência."""
@@ -423,7 +301,7 @@ class ICDAuditAndCleanerRobot:
                     loc.first.click(force=True)
                     saved = True
                     break
-                except Exception as e:
+                except PlaywrightError as e:
                     print(f"      ⚠️ Tentativa com {sel} falhou: {e}")
 
         if not saved:
@@ -433,8 +311,8 @@ class ICDAuditAndCleanerRobot:
                     print("      💾 Clicando em Salvar via alt_text...")
                     alt_btn.first.click(force=True)
                     saved = True
-            except Exception:
-                pass
+            except PlaywrightError as e:
+                print(f"      ⚠️ Salvar via alt_text falhou: {e}")
 
         if not saved:
             print("      ⌨️ Acionando atalho de teclado do Maximo (Ctrl+S)...")
@@ -520,7 +398,7 @@ class ICDAuditAndCleanerRobot:
         })
         print(f"   📸 Screenshot de enfileiramento capturado: {queue_shot.name}")
 
-        print(f"   [3/3] 🗑️ Iniciando exclusão do chamado teste (Reclassificar -> 'Excluir chamado teste')...")
+        print("   [3/3] 🗑️ Iniciando exclusão do chamado teste (Reclassificar -> 'Excluir chamado teste')...")
         reclassificado = False
         attempts_used = 1
         last_error = ""
@@ -569,19 +447,23 @@ class ICDAuditAndCleanerRobot:
 
                 self._click_save_ticket(page)
 
+                self._search_ticket(page, ticket.ticket_id)
+                if not self._is_reclassificado(page):
+                    raise RuntimeError(f"Classificação não virou '{EXCLUIR_LABEL}' após salvar")
+
                 reclassificado = True
                 print(f"      ✅ Chamado #{ticket.ticket_id} EXCLUÍDO (Reclassificado com sucesso na tentativa {attempt})!")
                 break
 
-            except Exception as err:
+            except (PlaywrightError, RuntimeError) as err:
                 last_error = str(err)
                 print(f"      ⚠️ Falha ao salvar reclassificação na tentativa {attempt}: {last_error}")
                 try:
                     no_btn = page.get_by_role("button", name="Não")
                     if no_btn.count() > 0 and no_btn.first.is_visible():
                         no_btn.first.click()
-                except Exception:
-                    pass
+                except PlaywrightError as modal_err:
+                    print(f"      ⚠️ Falha ao fechar modal pendente: {modal_err}")
                 time.sleep(2)
 
         final_shot = SCREENSHOTS_DIR / f"ticket_{ticket.ticket_id}_3_exclusao_{ts}.png"
@@ -625,8 +507,8 @@ class ICDAuditAndCleanerRobot:
         if latest_test_json and latest_test_json.exists():
             try:
                 test_run_data = json.loads(latest_test_json.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except (OSError, json.JSONDecodeError) as err:
+                logger.warning("Relatório de testes ilegível em %s: %s", latest_test_json, err)
 
         report_data = {
             "timestamp": datetime.now().isoformat(),
@@ -661,7 +543,7 @@ class ICDAuditAndCleanerRobot:
         try:
             generate_html_report(report_data, html_report_path, keep_history=self.keep_history)
         except Exception as err:
-            logger.error(f"Erro ao gerar relatório HTML: {err}", exc_info=True)
+            logger.exception("Erro ao gerar relatório HTML")
             print(f"⚠️ Erro ao gerar relatório HTML: {err}")
 
         print("\n" + "=" * 80)
