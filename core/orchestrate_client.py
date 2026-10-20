@@ -432,26 +432,22 @@ class OrchestrateClient:
 
     def open_ticket(self, body: dict[str, Any]) -> CallResult:
         payload = dict(body)
-        classification_id = payload.get("classificationId") or payload.get("CLASSIFICATIONID")
-        if classification_id and not payload.get("CLASSSTRUCTUREID"):
+        classification_id = payload.get("CLASSIFICATIONID") or payload.get("classificationId")
+        if classification_id:
             icd_meta = self.classify_icd(str(classification_id))
             if icd_meta:
-                if icd_meta.get("COMMODITY") and not payload.get("COMMODITY"):
-                    payload["COMMODITY"] = icd_meta["COMMODITY"]
-                if icd_meta.get("COMMODITYGROUP") and not payload.get("COMMODITYGROUP"):
-                    payload["COMMODITYGROUP"] = icd_meta["COMMODITYGROUP"]
-                if icd_meta.get("CLASSSTRUCTUREID") and not payload.get("CLASSSTRUCTUREID"):
-                    payload["CLASSSTRUCTUREID"] = icd_meta["CLASSSTRUCTUREID"]
-                if icd_meta.get("CLASSIFICATIONID") and not payload.get("CLASSIFICATIONID"):
-                    payload["CLASSIFICATIONID"] = icd_meta["CLASSIFICATIONID"]
+                for key in ("CLASSIFICATIONID", "CLASSSTRUCTUREID", "COMMODITY", "COMMODITYGROUP"):
+                    if icd_meta.get(key):
+                        payload[key] = icd_meta[key]
             else:
                 logger.warning(
-                    "open_ticket: prosseguindo sem classStructureId pois classify_icd não retornou metadados."
+                    "open_ticket: classify_icd sem metadados para %s; seguindo com valores do body.",
+                    classification_id,
                 )
 
         nome = str(payload.get("REPORTEDBY") or payload.get("nome") or "").strip()
         email = str(payload.get("REPORTEDEMAIL") or payload.get("email") or "").strip()
-        unidade = str(payload.get("LOCATION") or payload.get("unidade") or "CAS").strip()
+        location = str(payload.get("LOCATION") or "").strip()
         classification = str(payload.get("CLASSIFICATIONID") or payload.get("classificationId") or "").strip()
         class_structure_id = str(payload.get("CLASSSTRUCTUREID") or payload.get("classStructureId") or "").strip()
         commodity = str(payload.get("COMMODITY") or payload.get("commodity") or "").strip()
@@ -478,19 +474,29 @@ class OrchestrateClient:
             "COMMODITYGROUP": commodity_group,
             "DESCRIPTION": description,
             "DESCRIPTION_LONGDESCRIPTION": long_description,
-            "LOCATION": unidade,
+            "LOCATION": location,
             "CURSO": "",
-            "UNIDADE_CURSO": "",
+            "UNIDADE_CURSO": str(payload.get("UNIDADE_CURSO") or "").strip(),
             "SNCCODIGOOFERTA": "",
             "SNCINSCRICAO": "",
         }
 
+        cpf_afetado = str(payload.get("CPF_AFETADO") or "").strip()
+        if cpf_afetado:
+            clean_payload["CPF_AFETADO"] = cpf_afetado
+
         specs = payload.get("TICKETSPECS") or payload.get("ticketSpecs")
         if isinstance(specs, list) and len(specs) > 0:
-            clean_payload["TICKETSPECS"] = specs
+            clean_payload["TICKETSPECS"] = [
+                {k: v for k, v in spec.items() if k == "ASSETATTRID" or str(v or "").strip()}
+                for spec in specs
+                if isinstance(spec, dict) and spec.get("ASSETATTRID")
+            ]
 
         anexo = payload.get("anexo")
-        if anexo and isinstance(anexo, (dict, str)) and bool(anexo):
+        if isinstance(anexo, str) and anexo.strip().startswith(("http://", "https://")):
+            anexo = {"file_url": anexo.strip()}
+        if anexo and isinstance(anexo, (dict, str)):
             clean_payload["anexo"] = anexo
 
         return self.post_json("/tools/abertura-chamado", clean_payload)

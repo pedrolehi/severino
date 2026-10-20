@@ -90,57 +90,6 @@ GEP_FIXED_DESCRIPTIONS: dict[str, str] = {
     "Problemas ou indisponibilidade do robô": "Gestão da Tecnologia,Suporte para Sistemas,Relatar um erro,Relatar um erro",
 }
 
-# Metadados de classificação conhecidos do Maximo (cache fixo de homologação e produção)
-ICD_KNOWN_METADATA: dict[str, dict[str, str]] = {
-    "SNC_INT_00300702": {
-        "CLASSSTRUCTUREID": "31594",
-        "COMMODITY": "0230302",
-        "COMMODITYGROUP": "02303",
-        "DESCRIPTION": "Gestão de Pessoas,Administração de Pessoal,Esclarecimento sobre emissão de crachás",
-    },
-    "SNC_INT_00300701": {
-        "CLASSSTRUCTUREID": "31593",
-        "COMMODITY": "0230301",
-        "COMMODITYGROUP": "02303",
-        "DESCRIPTION": "Gestão de pessoas, Administração de Pessoal, Ajuste de dados no Rhevolution para Pessoa Física",
-    },
-    "SNC_INT_00301001": {
-        "CLASSSTRUCTUREID": "31596",
-        "COMMODITY": "0230304",
-        "COMMODITYGROUP": "02303",
-        "DESCRIPTION": "Gestão de Pessoas,Consulta Jurídica,Consulta jurídica para contratações de prestadores de serviço carta convite - Pessoa Física/Jurídica",
-    },
-    "SNC_INT_003011": {
-        "CLASSSTRUCTUREID": "31598",
-        "COMMODITY": "0230306",
-        "COMMODITYGROUP": "02303",
-        "DESCRIPTION": "Gestão de pessoas,Dúvidas sobre prestadores de serviço carta convite PF e PJ",
-    },
-    "SNC_INT_003012": {
-        "CLASSSTRUCTUREID": "31597",
-        "COMMODITY": "0230305",
-        "COMMODITYGROUP": "02303",
-    },
-    "SNC_INT_003012001": {
-        "CLASSSTRUCTUREID": "31597",
-        "COMMODITY": "0230305",
-        "COMMODITYGROUP": "02303",
-    },
-    "SNC-15003001": {
-        "CLASSSTRUCTUREID": "31261",
-        "COMMODITY": "015004",
-        "COMMODITYGROUP": "015",
-        "DESCRIPTION": "Gestão da Tecnologia,Suporte para Sistemas,Relatar um erro,Relatar um erro",
-    },
-    "SNC-150121001": {
-        "CLASSSTRUCTUREID": "32535",
-        "COMMODITY": "150_1111",
-        "COMMODITYGROUP": "150_111",
-        "DESCRIPTION": "Relatar um erro no Ponto Web (Aplicação)",
-    },
-}
-
-
 def resolve_fixed_description(tipo: str, *, tema: str = "", subtema: str = "") -> str:
     """Resolve a DESCRIPTION hierárquica exata do Catálogo de Serviços do Maximo."""
     if tipo == "Benefícios Cooperativa" or (tipo == "Benefícios" and subtema):
@@ -166,22 +115,13 @@ def resolve_gep_ticket_specs(
     subtema: str = "",
 ) -> list[dict[str, str]]:
     """Gera a lista de TICKETSPECS estruturada de acordo com o padrão do Maximo."""
-    if tipo == "Crachás":
+    if tipo in ("Crachás", "Ponto eletrônico"):
         return []
-    if tipo == "Ponto eletrônico":
-        return [{"ASSETATTRID": "SNC-1500300101", "TABLEVALUE": "Ponto Web (Aplicação)"}]
     if tipo in ("Benefícios", "Benefícios Cooperativa"):
-        cpf = info.get("cpf") or ""
-        if subtema or tipo == "Benefícios Cooperativa":
-            return [
-                {"ASSETATTRID": "SNC_INT_0030120106", "ALNVALUE": tema},
-                {"ASSETATTRID": "SNC_INT_0030120107", "ALNVALUE": subtema},
-                {"ASSETATTRID": "SNC_INT_0030120108", "ALNVALUE": cpf},
-            ]
         return [
-            {"ASSETATTRID": "SNC_INT_0030120106", "ALNVALUE": tema},
-            {"ASSETATTRID": "SNC_INT_0030120107", "ALNVALUE": ""},
-            {"ASSETATTRID": "SNC_INT_0030120108", "ALNVALUE": cpf},
+            {"ASSETATTRID": "SNC_INT_003012001001", "ALNVALUE": tema},
+            {"ASSETATTRID": "SNC_INT_003012001002", "ALNVALUE": subtema},
+            {"ASSETATTRID": "SNC_INT_003012001003", "ALNVALUE": info.get("cpf") or ""},
         ]
     if tipo in ("Consulta Juridica", "Consulta juridica"):
         return [
@@ -191,12 +131,9 @@ def resolve_gep_ticket_specs(
             {"ASSETATTRID": "SNC_INT_0030100104", "ALNVALUE": info.get("pis") or ""},
         ]
     if tipo == "Dúvidas gerais":
-        return [{"ASSETATTRID": "SNC_INT_0030110101", "ALNVALUE": tema}]
+        return [{"ASSETATTRID": "SNC_INT_0030060101", "ALNVALUE": tema}]
     if tipo == "RPA - Consulta PF":
-        return [
-            {"ASSETATTRID": "SNC-1500300101", "TABLEVALUE": "RPA (Robotic Process Automation)"},
-            {"ASSETATTRID": "SNC-1500300131", "TABLEVALUE": "RPA_GEP SB21GEP03301 - Consulta PF - Sprint 1 e 2"},
-        ]
+        return [{"ASSETATTRID": "SNC-150142001001", "ALNVALUE": ""}]
     return []
 
 
@@ -226,11 +163,6 @@ def pessoa_body(
         else resolve_gep_ticket_specs(tipo, info, tema=tema, subtema=subtema)
     )
 
-    known_meta = ICD_KNOWN_METADATA.get(classification, {})
-    class_structure_id = known_meta.get("CLASSSTRUCTUREID", "")
-    commodity = known_meta.get("COMMODITY", "")
-    commodity_group = known_meta.get("COMMODITYGROUP", "")
-
     body = {
         "area": "gep",
         "nome": nome,
@@ -240,12 +172,6 @@ def pessoa_body(
         "tipo_chamado": tipo,
         "classificationId": classification,
         "CLASSIFICATIONID": classification,
-        "classStructureId": class_structure_id,
-        "CLASSSTRUCTUREID": class_structure_id,
-        "commodity": commodity,
-        "COMMODITY": commodity,
-        "commodityGroup": commodity_group,
-        "COMMODITYGROUP": commodity_group,
         "texto": texto,
         "tema": tema,
         "subtema": subtema,
@@ -254,6 +180,7 @@ def pessoa_body(
         "REPORTEDEMAIL": email,
         "AFFECTEDEMAIL": email,
         "LOCATION": unidade,
+        "UNIDADE_CURSO": unidade,
         "DESCRIPTION": final_desc,
         "DESCRIPTION_LONGDESCRIPTION": long_desc,
         "dataNascimento": info.get("data_nascimento") or "",

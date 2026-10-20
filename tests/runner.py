@@ -45,6 +45,16 @@ def _extract_ticket_id(text: str) -> str | None:
     return None
 
 
+def _expects_ticket(scenario: Scenario) -> bool:
+    if scenario.metadata.get("sem_protocolo"):
+        return False
+    return (
+        "abertura_chamado" in scenario.flow_name.casefold()
+        or "abertura_chamado" in scenario.id.casefold()
+        or "abertura" in scenario.name.casefold()
+    )
+
+
 def _last_ai_message(result: dict[str, Any]) -> AIMessage | None:
     messages = result.get("messages") or []
     for msg in reversed(messages):
@@ -161,11 +171,7 @@ class FlowTestRunner:
                     )
 
             lower_output = output_text.casefold()
-            is_abertura_scenario = (
-                "abertura_chamado" in scenario.flow_name.casefold()
-                or "abertura_chamado" in scenario.id.casefold()
-                or "abertura" in scenario.name.casefold()
-            )
+            is_abertura_scenario = _expects_ticket(scenario)
             is_done_turn = bool(exp.is_done) or idx == len(scenario.turns)
 
             if "não abri o chamado" in lower_output or "temporariamente indisponível" in lower_output:
@@ -207,12 +213,7 @@ class FlowTestRunner:
             )
 
         duration_ms = (time.perf_counter() - t0) * 1000
-        is_abertura_scenario = (
-            "abertura_chamado" in scenario.flow_name.casefold()
-            or "abertura_chamado" in scenario.id.casefold()
-            or "abertura" in scenario.name.casefold()
-        )
-        if is_abertura_scenario and not created_tickets:
+        if _expects_ticket(scenario) and not created_tickets:
             all_passed = False
 
         return ScenarioResult(

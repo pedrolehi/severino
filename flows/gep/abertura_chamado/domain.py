@@ -20,10 +20,10 @@ CARTA = [
 
 TIPOS = {
     "crachas": ("Crachás", "SNC_INT_00300702"),
-    "ponto": ("Ponto eletrônico", "SNC-15003001"),
+    "ponto": ("Ponto eletrônico", "SNC-150121001"),
     "beneficios": ("Benefícios", "SNC_INT_003012001"),
     "consulta": ("Consulta juridica", "SNC_INT_00301001"),
-    "duvidas": ("Dúvidas gerais", "SNC_INT_003011"),
+    "duvidas": ("Dúvidas gerais", "SNC_INT_00300601"),
     "ajustes": ("Ajustes de dados cadastrais", "SNC_INT_00300701"),
 }
 

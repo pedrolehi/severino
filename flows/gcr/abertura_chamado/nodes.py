@@ -17,7 +17,7 @@ from flows.kit import (
     render_named,
     session_block,
 )
-from flows.payload import anexo_texto, pessoa_body
+from flows.payload import anexo_texto
 from flows.runtime import parse_boolean
 from flows.screen import load_screens, screen_text
 from flows.session import missing_fields, session_from_state
@@ -31,15 +31,20 @@ STEP_ARQUIVO = "anexo"
 
 
 def _abrir(info: dict[str, str], texto: str, anexo: str) -> str:
-    body = pessoa_body(
-        info,
-        tipo=d.TIPO_CHAMADO,
-        classification=d.CLASSIFICATION_ID,
-        texto=texto,
-        tema=d.TIPO_CHAMADO,
-    )
-    body["area"] = "gcr"
-    body["anexo"] = anexo
+    nome = info.get("nome") or ""
+    email = info.get("email") or ""
+    body: dict[str, Any] = {
+        "area": "gcr",
+        "REPORTEDBY": nome,
+        "AFFECTEDPERSON": nome,
+        "REPORTEDEMAIL": email,
+        "AFFECTEDEMAIL": email,
+        "CLASSIFICATIONID": d.CLASSIFICATION_ID,
+        "DESCRIPTION": f"{d.TIPO_CHAMADO},{texto}" if texto else d.TIPO_CHAMADO,
+        "DESCRIPTION_LONGDESCRIPTION": f"Tema: {d.TIPO_CHAMADO}\nDescrição: {texto}",
+    }
+    if anexo:
+        body["anexo"] = anexo
     result = create_orchestrate_client().open_ticket(body)
     if result.ticket_id:
         return protocol_message(result.ticket_id, None)

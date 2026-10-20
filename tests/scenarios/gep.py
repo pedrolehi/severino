@@ -188,4 +188,57 @@ GEP_SCENARIOS: list[Scenario] = [
             ),
         ],
     ),
+    *[
+        Scenario(
+            id=f"gep_abertura_chamado_carta_convite_{slug}",
+            name=f"GEP - Abertura de Chamado de Carta Convite ({tema})",
+            flow_name="gep_abertura_chamado_carta_convite",
+            turns=[
+                Turn(
+                    input_text="Preciso abrir chamado sobre carta convite",
+                    description="Acionamento do fluxo de carta convite",
+                    expected=TurnExpected(
+                        active_flow="gep_abertura_chamado_carta_convite",
+                        flow_step="tema",
+                        has_ui=True,
+                    ),
+                ),
+                Turn(
+                    input_text=tema,
+                    description=f"Seleção do tema {tema}",
+                    expected=TurnExpected(
+                        active_flow="gep_abertura_chamado_carta_convite",
+                        flow_step="detalhe",
+                        has_ui=True,
+                    ),
+                ),
+                Turn(
+                    input_text=f"[CHAMADO DE TESTE AUTOMÁTICO - FAVOR DESCONSIDERAR] {detalhe}",
+                    description="Preenchimento do detalhe",
+                    expected=TurnExpected(
+                        active_flow="gep_abertura_chamado_carta_convite",
+                        flow_step="ask_anexo",
+                        has_ui=True,
+                    ),
+                ),
+                Turn(
+                    input_text="Não",
+                    description="Dispensa envio de arquivo",
+                    expected=TurnExpected(
+                        is_done=True,
+                        text_contains=["protocolo"],
+                    ),
+                ),
+            ],
+        )
+        for slug, tema, detalhe in (
+            ("consulta_juridica", "Consulta Juridica", "Consulta jurídica para contratação de prestador PF."),
+            (
+                "dados_cadastrais",
+                "Alteração de dados cadastrais/bancários - PF",
+                "Ajuste de dados bancários de prestador PF.",
+            ),
+            ("rpa", "RPA - Consulta PF", "Robô de consulta PF indisponível."),
+        )
+    ],
 ]

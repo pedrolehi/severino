@@ -19,7 +19,7 @@ from flows.kit import (
     select_form,
     session_block,
 )
-from flows.payload import anexo_texto, geral_body
+from flows.payload import anexo_texto
 from flows.runtime import parse_boolean
 from flows.screen import load_screens, screen_text
 from flows.session import missing_fields, session_from_state
@@ -35,18 +35,11 @@ STEP_ARQUIVO = "anexo"
 
 
 def _submeter(info: dict[str, str], flow_data: dict[str, Any], anexo: str) -> str:
-    assunto = str(flow_data.get("assunto") or "Abertura GEDUC")
+    assunto = str(flow_data.get("assunto") or "")
     subtema = str(flow_data.get("subtema") or "")
     texto = str(flow_data.get("texto") or "")
-    texto_completo = f"[{subtema}] {texto}" if subtema else texto
 
-    body = geral_body(
-        info,
-        tipo=assunto,
-        classification="GEDUC",
-        texto=texto_completo,
-        area="geduc",
-    )
+    body = d.build_ticket_body(info, assunto, subtema, texto)
     if anexo:
         body["anexo"] = anexo
 

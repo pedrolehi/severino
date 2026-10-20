@@ -29,6 +29,6 @@ DUVIDAS_TEMAS = [
 CLASSIFICATIONS = {
     "dados_cadastrais": ("Alteração de dados cadastrais/bancários - PF", "SNC_INT_00300701"),
     "consulta_juridica": ("Consulta Juridica", "SNC_INT_00301001"),
-    "duvidas_gerais": ("Dúvidas gerais", "SNC_INT_003011"),
-    "rpa_consulta": ("RPA - Consulta PF", "SNC_INT_00301001"),
+    "duvidas_gerais": ("Dúvidas gerais", "SNC_INT_00300601"),
+    "rpa_consulta": ("RPA - Consulta PF", "SNC-150142001"),
 }

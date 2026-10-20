@@ -41,6 +41,10 @@ FORM_ARQUIVO = c.anexo_form(
 )
 
 
+def _tema(flow_data: dict[str, Any]) -> str:
+    return str(flow_data.get("subtema") or flow_data.get("tipo") or "Carta Convite")
+
+
 def gep_abertura_chamado_carta_convite_node(state: MultiAgentState) -> dict:
     step = state.get("flow_step")
     flow_data: dict[str, Any] = dict(state.get("flow_data") or {})
@@ -157,8 +161,7 @@ def gep_abertura_chamado_carta_convite_node(state: MultiAgentState) -> dict:
             tipo=str(flow_data.get("tipo") or "Carta Convite"),
             classification=str(flow_data.get("classification") or "SNC_INT_003011"),
             texto=str(flow_data.get("texto") or ""),
-            tema=str(flow_data.get("tipo") or "Carta Convite"),
-            subtema=str(flow_data.get("subtema") or ""),
+            tema=_tema(flow_data),
             anexo="",
         )
         return pack(
@@ -184,8 +187,7 @@ def gep_abertura_chamado_carta_convite_node(state: MultiAgentState) -> dict:
         tipo=str(flow_data.get("tipo") or "Carta Convite"),
         classification=str(flow_data.get("classification") or "SNC_INT_003011"),
         texto=str(flow_data.get("texto") or ""),
-        tema=str(flow_data.get("tipo") or "Carta Convite"),
-        subtema=str(flow_data.get("subtema") or ""),
+        tema=_tema(flow_data),
         anexo=anexo,
     )
     return pack(

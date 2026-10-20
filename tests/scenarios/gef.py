@@ -51,6 +51,7 @@ GEF_SCENARIOS: list[Scenario] = [
         id="gef_centro_de_custo_solicitar",
         name="GEF - Centro de Custo (Solicitar Abertura)",
         flow_name="centro_de_custo",
+        metadata={"sem_protocolo": True},
         turns=[
             Turn(
                 input_text="Quero consultar centro de custo",
@@ -182,13 +183,7 @@ GEF_SCENARIOS: list[Scenario] = [
         name="GEF - Cancelamento Financeiro (Revisão de Cálculo)",
         flow_name="gef_cancelamento_financeiro",
         metadata={
-            "user_info": {
-                "chapa": "1142372",
-                "nome": "FLAVIO CARVALHO MACHADO",
-                "email": "flavio.cmachado@sp.senac.br",
-                "cpf": "443.456.428-50",
-                "unidade": "CAS",
-            },
+            "require_acesso_total": True,
             "business_params": {
                 "tipo": "Revisão de Cálculo",
                 "idAluno": "1140729161",
@@ -241,13 +236,7 @@ GEF_SCENARIOS: list[Scenario] = [
         name="GEF - Cancelamento Financeiro (Não Processados)",
         flow_name="gef_cancelamento_financeiro",
         metadata={
-            "user_info": {
-                "chapa": "1142372",
-                "nome": "FLAVIO CARVALHO MACHADO",
-                "email": "flavio.cmachado@sp.senac.br",
-                "cpf": "443.456.428-50",
-                "unidade": "CAS",
-            },
+            "require_acesso_total": True,
             "business_params": {
                 "tipo": "Não processados",
                 "lote": False,
