@@ -260,6 +260,16 @@ class ICDAuditAndCleanerRobot:
                 return value
         return ""
 
+    def _scroll_to_top(self, page) -> None:
+        """O Maximo mantém a rolagem do chamado anterior; o cabeçalho (grupo/status) fica fora do print."""
+        page.evaluate(
+            """() => {
+                window.scrollTo(0, 0);
+                document.querySelectorAll('*').forEach(el => { if (el.scrollTop > 0) el.scrollTop = 0; });
+            }"""
+        )
+        time.sleep(0.5)
+
     def _is_reclassificado(self, page) -> bool:
         """Confere na tela recarregada se a classificação virou 'Excluir chamado teste'."""
         return page.evaluate(
@@ -349,6 +359,7 @@ class ICDAuditAndCleanerRobot:
         self._search_ticket(page, ticket.ticket_id)
 
         initial_shot = SCREENSHOTS_DIR / f"ticket_{ticket.ticket_id}_1_abertura_{ts}.png"
+        self._scroll_to_top(page)
         page.screenshot(path=str(initial_shot), full_page=True)
         screenshots.append({
             "stage": "1. Abertura",
@@ -390,6 +401,7 @@ class ICDAuditAndCleanerRobot:
             else f"Não enfileirou após {wait_seconds}s (Timeout {self.queue_timeout_s // 60} min)"
         )
         queue_shot = SCREENSHOTS_DIR / f"ticket_{ticket.ticket_id}_2_enfileiramento_{ts}.png"
+        self._scroll_to_top(page)
         page.screenshot(path=str(queue_shot), full_page=True)
         screenshots.append({
             "stage": stage_name,
