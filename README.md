@@ -76,7 +76,19 @@ OPENJEV_BASE_URL=http://10.1.0.110:8011
 # senac-orchestrate (flows GEF)
 SENAC_ORCHESTRATE_URL=https://HOST/v2
 # ORCHESTRATE_USE_MOCK=true   # sem orchestrate: mock de NF
+
+# Langfuse — 1 trace por turno (nós, router, flows, RAG, LLM). Sem chaves = desligado.
+LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_SECRET_KEY=
+LANGFUSE_HOST=https://us.cloud.langfuse.com   # ou LANGFUSE_BASE_URL
 ```
+
+Trace agrupado por `session_id`; `user_id` = `user_id` do request ou chapa; tags `the.ia` e `assistant:<id>`; `environment` = `APP_ENV`. CPF, PIS, e-mail, nome e data de nascimento são mascarados (`core/observability.py`). Texto livre digitado pelo usuário vai como está.
+
+Langfuse self-hosted no OpenShift (HML aponta para ele): ver `openshift/langfuse/README.md`.
+
+Testes unitários: `pip install -r requirements-dev.txt` e `python -m pytest`.
 
 ---
 

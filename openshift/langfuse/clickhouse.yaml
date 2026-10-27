@@ -1,0 +1,129 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: clickhouse-config
+  namespace: langfuse
+  labels:
+    app: clickhouse
+data:
+  timezone.xml: |
+    <clickhouse>
+      <timezone>UTC</timezone>
+    </clickhouse>
+  default-user.xml: |
+    <clickhouse>
+      <users>
+        <default>
+          <password replace="replace" from_env="CH_DEFAULT_PASSWORD"/>
+          <access_management>1</access_management>
+        </default>
+      </users>
+    </clickhouse>
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: clickhouse
+  namespace: langfuse
+  labels:
+    app: clickhouse
+spec:
+  selector:
+    app: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: native
+      port: 9000
+      targetPort: 9000
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: clickhouse
+  namespace: langfuse
+  labels:
+    app: clickhouse
+spec:
+  serviceName: clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: clickhouse
+          image: docker.io/clickhouse/clickhouse-server:26.4
+          ports:
+            - name: http
+              containerPort: 8123
+            - name: native
+              containerPort: 9000
+          env:
+            # Entrypoint não pode gravar em /etc com UID aleatório do OpenShift; senha vem do users.d montado.
+            - name: CLICKHOUSE_SKIP_USER_SETUP
+              value: "1"
+            - name: CH_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: langfuse
+                  key: clickhouse-password
+            - name: TZ
+              value: UTC
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: logs
+              mountPath: /var/log/clickhouse-server
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/timezone.xml
+              subPath: timezone.xml
+            - name: config
+              mountPath: /etc/clickhouse-server/users.d/default-user.xml
+              subPath: default-user.xml
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: clickhouse-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: ibmc-vpc-block-retain-10iops-tier
+        resources:
+          requests:
+            storage: 20Gi

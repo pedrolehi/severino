@@ -1,0 +1,177 @@
+# Chart langfuse-k8s >= 2.0.0. Release name: langfuse. Namespace: langfuse.
+# Todas as senhas vêm do Secret "langfuse" (criado à parte, fora do git).
+
+langfuse:
+  salt:
+    secretKeyRef:
+      name: langfuse
+      key: salt
+  encryptionKey:
+    secretKeyRef:
+      name: langfuse
+      key: encryption-key
+  nextauth:
+    url: https://langfuse.ocp-senac-11f45abbd458185944dd806416f75c34-0000.us-south.containers.appdomain.cloud
+    secret:
+      secretKeyRef:
+        name: langfuse
+        key: nextauth-secret
+
+  features:
+    telemetryEnabled: false
+    signUpDisabled: true
+
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+
+  # GHCR em vez de docker.langfuse.com (proxy do Docker Hub, com rate limit anônimo por IP do nó).
+  web:
+    image:
+      repository: ghcr.io/langfuse/langfuse
+    # Heap padrão do Node (~515MB) estoura no boot do next-server.
+    pod:
+      additionalEnv:
+        - name: NODE_OPTIONS
+          value: --max-old-space-size=1536
+    resources:
+      requests:
+        cpu: 250m
+        memory: 1Gi
+      limits:
+        memory: 2Gi
+    pdb:
+      create: false
+
+  worker:
+    image:
+      repository: ghcr.io/langfuse/langfuse-worker
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    pdb:
+      create: false
+
+  additionalEnv:
+    - name: TZ
+      value: UTC
+    - name: LANGFUSE_INIT_ORG_ID
+      value: senac
+    - name: LANGFUSE_INIT_ORG_NAME
+      value: Senac SP
+    - name: LANGFUSE_INIT_PROJECT_ID
+      value: the-ia
+    - name: LANGFUSE_INIT_PROJECT_NAME
+      value: The.ia
+    - name: LANGFUSE_INIT_PROJECT_PUBLIC_KEY
+      valueFrom:
+        secretKeyRef:
+          name: langfuse
+          key: init-project-public-key
+    - name: LANGFUSE_INIT_PROJECT_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: langfuse
+          key: init-project-secret-key
+    - name: LANGFUSE_INIT_USER_EMAIL
+      value: pedro.lrmuniz@sp.senac.br
+    - name: LANGFUSE_INIT_USER_NAME
+      value: Admin
+    - name: LANGFUSE_INIT_USER_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: langfuse
+          key: init-user-password
+
+# Postgres gerenciado (IBM Databases for PostgreSQL), endpoint privado.
+postgresql:
+  deploy: false
+  host: 4042a6cd-7304-45e0-bf2b-2524a196187b.c7dvrhud08vgdqo60090.private.databases.appdomain.cloud
+  port: 30131
+  args: sslmode=require
+  auth:
+    username: langfuse
+    database: langfuse
+    existingSecret: langfuse
+    secretKeys:
+      userPasswordKey: postgresql-password
+
+# ClickHouse próprio (clickhouse.yaml), single node, sem operator/Keeper.
+clickhouse:
+  deploy: false
+  host: clickhouse.langfuse.svc.cluster.local
+  httpPort: 8123
+  nativePort: 9000
+  database: default
+  auth:
+    username: default
+    existingSecret: langfuse
+    existingSecretKey: clickhouse-password
+  migration:
+    ssl: false
+    autoMigrate: true
+  cluster:
+    enabled: false
+
+# IBM Cloud Object Storage (S3 compatível), endpoint direct para cluster VPC.
+s3:
+  deploy: false
+  storageProvider: s3
+  bucket: senac-langfuse
+  region: us-south
+  endpoint: https://s3.direct.us-south.cloud-object-storage.appdomain.cloud
+  forcePathStyle: true
+  accessKeyId:
+    secretKeyRef:
+      name: langfuse
+      key: s3-user
+  secretAccessKey:
+    secretKeyRef:
+      name: langfuse
+      key: s3-password
+  eventUpload:
+    prefix: events/
+  batchExport:
+    prefix: exports/
+  mediaUpload:
+    prefix: media/
+
+# Valkey dentro do chart, 1 pod.
+redis:
+  deploy: true
+  auth:
+    enabled: true
+    username: default
+    existingSecret: langfuse
+    existingSecretPasswordKey: redis-password
+    # Secret precisa da chave "default" (= redis-password) para a ACL do Valkey.
+    usersExistingSecret: langfuse
+  # ECR público em vez de Docker Hub (rate limit anônimo).
+  image:
+    registry: public.ecr.aws
+    repository: valkey/valkey
+    tag: "8.0"
+  dataStorage:
+    enabled: true
+    requestedSize: 10Gi
+    className: ibmc-vpc-block-retain-10iops-tier
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  # restricted-v2 só aceita UID/fsGroup no range do namespace (openshift.io/sa.scc.uid-range = 1000100000/10000).
+  # null não remove o default 1000 do subchart (limitação do Helm), então o UID vai explícito.
+  podSecurityContext:
+    fsGroup: 1000100000
+    runAsUser: 1000100000
+    runAsGroup: 1000100000
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    runAsUser: 1000100000
+    runAsGroup: 1000100000
