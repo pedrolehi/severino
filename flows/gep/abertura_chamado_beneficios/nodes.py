@@ -11,6 +11,7 @@ from flows.kit import (
     last_user_text,
     match_choice,
     pack,
+    question_screen,
     reject,
     session_block,
 )
@@ -27,12 +28,7 @@ STEP_DETALHE = "detalhe"
 STEP_ANEXO = "ask_anexo"
 STEP_ARQUIVO = "anexo"
 
-FORM_DETALHE = c.detalhe_form(
-    name="gep_beneficios_detalhe",
-    title="Benefícios - Detalhes",
-    field_title="Descreva sua solicitação de benefícios:",
-    placeholder="Informe detalhadamente sua solicitação sobre benefícios...",
-)
+PERGUNTA_DETALHE = question_screen("Descreva detalhadamente sua solicitação de benefícios.")
 
 FORM_ARQUIVO = c.anexo_form(
     name="gep_beneficios_anexo",
@@ -88,7 +84,7 @@ def gep_abertura_chamado_beneficios_node(state: MultiAgentState) -> dict:
             step=STEP_DETALHE,
             flow_data=flow_data,
             texts=(f"Tema selecionado: {tema}",),
-            screens=(FORM_DETALHE,),
+            screens=(PERGUNTA_DETALHE,),
         )
 
     if step == STEP_SUBTEMA:
@@ -108,11 +104,11 @@ def gep_abertura_chamado_beneficios_node(state: MultiAgentState) -> dict:
             step=STEP_DETALHE,
             flow_data=flow_data,
             texts=(f"Tema: Cooperativa ({subtema})",),
-            screens=(FORM_DETALHE,),
+            screens=(PERGUNTA_DETALHE,),
         )
 
     if step == STEP_DETALHE:
-        texto = field_text(user_text, "texto") or str(form_data_of(user_text).get("texto") or "").strip()
+        texto = field_text(user_text, "texto")
         if not texto:
             return reject(
                 flow_name=d.FLOW_NAME,
@@ -120,7 +116,7 @@ def gep_abertura_chamado_beneficios_node(state: MultiAgentState) -> dict:
                 prompt="Por favor, detalhe a sua solicitação:",
                 flow_data=flow_data,
                 service_label=d.SERVICE_LABEL,
-                resume_ui=[FORM_DETALHE],
+                resume_ui=[PERGUNTA_DETALHE],
             )
         flow_data["texto"] = texto
         return pack(

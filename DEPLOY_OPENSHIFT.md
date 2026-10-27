@@ -1,12 +1,12 @@
 # Guia de Deploy e Manutenção — OpenShift & CI/CD (IBM Cloud)
 
-Este documento centraliza toda a arquitetura de implantação, esteira de CI/CD via GitHub Actions e configurações de rede do **`from-scratch-multiagent`** na infraestrutura IBM Cloud / OpenShift do Senac.
+Este documento centraliza toda a arquitetura de implantação, esteira de CI/CD via GitHub Actions e configurações de rede da **`The.ia`** na infraestrutura IBM Cloud / OpenShift do Senac.
 
 ---
 
 ## 1. Visão Geral da Arquitetura
 
-O `from-scratch-multiagent` roda como um container FastAPI/Uvicorn em pods gerenciados no cluster Red Hat OpenShift da IBM Cloud.
+A `The.ia` roda como um container FastAPI/Uvicorn em pods gerenciados no cluster Red Hat OpenShift da IBM Cloud.
 
 ```
                             [ Cliente / Widget / Intranet ]
@@ -18,7 +18,7 @@ O `from-scratch-multiagent` roda como um container FastAPI/Uvicorn em pods geren
       OpenShift Service (hml-senac-from-scratch-multiagent-service:8000)
                                            │
                                            ▼
-                         Pod: from-scratch-multiagent
+                         Pod: The.ia (nome k8s legado)
                          ┌────────────────────────────────────────────────────────┐
                          │                                                        │
                          ├─► search-vectory (RAG)                                 │
@@ -45,6 +45,8 @@ O `from-scratch-multiagent` roda como um container FastAPI/Uvicorn em pods geren
 
 ## 2. Ambientes e Nomenclatura
 
+> **Migração pendente:** o produto foi renomeado para **The.ia** (repo `pedrolehi/The.ia`), mas os recursos de infra ainda usam o nome antigo `senac-from-scratch-multiagent` (imagem ICR, Deployment, Service, Secret, Route e path `/from-scratch-multiagent`). Esses nomes foram mantidos por decisão; migrar para `senac-theia` (Kubernetes não aceita ponto em nomes de recurso) junto com o broker (`THEIA_URL` no `senac-agente-orquestrador`) e `.github/workflows/deploy.yml`.
+
 | Parâmetro | Homologação (`homolog`) | Produção (`main`) |
 | :--- | :--- | :--- |
 | **Cluster IBM** | `OCP-Senac` | `OCP-Senac` |
@@ -64,7 +66,7 @@ O `from-scratch-multiagent` roda como um container FastAPI/Uvicorn em pods geren
 Todos os arquivos de containerização e deploy residem na raiz e na pasta `openshift/`:
 
 ```
-from-scratch-multiagent/
+The.ia/
 ├── Dockerfile                        # Build Python 3.11-slim com non-root GID 0
 ├── .dockerignore                     # Exclusão de venv, cache e .env do build
 ├── requirements.txt                  # Dependências de produção

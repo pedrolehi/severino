@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from core.orchestrate_client import create_orchestrate_client
+from flows.gep.abertura_chamado import domain as d
 from flows.kit import (
     buttons_screen,
     form_data_of,
@@ -21,7 +22,6 @@ from flows.payload import anexo_texto, pessoa_body
 from flows.runtime import parse_boolean
 from flows.screen import load_screens, screen_text
 from flows.session import missing_fields, session_from_state
-from flows.gep.abertura_chamado import domain as d
 from graph.state import MultiAgentState
 
 SCREENS = load_screens(Path(__file__).with_name("screens.json"))
@@ -35,7 +35,7 @@ STEP_ARQUIVO = "anexo"
 def _abrir(info: dict[str, str], flow_data: dict[str, Any], anexo: str) -> str:
     tipo, classification = d.TIPOS[str(flow_data["tipo_key"])]
     body = pessoa_body(
-        info,
+        {**info, "unidade": ""},
         tipo=tipo,
         classification=classification,
         texto=str(flow_data.get("texto") or ""),
@@ -55,7 +55,7 @@ def gep_abertura_chamado_node(state: MultiAgentState) -> dict:
     info = session_from_state(state)
 
     if step is None:
-        missing = missing_fields(info, ("nome", "email", "cpf", "unidade"))
+        missing = missing_fields(info, ("nome", "email", "cpf"))
         if missing:
             return pack(
                 flow_name=d.FLOW_NAME,

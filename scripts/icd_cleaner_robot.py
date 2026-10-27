@@ -49,6 +49,11 @@ REPORTS_DIR = ROOT_DIR / "reports"
 SCREENSHOTS_DIR = REPORTS_DIR / "screenshots"
 
 EXCLUIR_LABEL = "Excluir chamado teste"
+MAXIMO_SR_URL = "https://suporte.sp.senac.br/maximo/ui/?event=loadapp&value=sr"
+# Chamado nesses status já foi atendido por alguém: não reclassificar.
+STATUS_JA_ATENDIDO = {"RESOLVIDO", "ENCERRADO", "FINALIZADO"}
+MAXIMO_NOT_FOUND_CODE = "BMXAA4186E"
+STATUS_NAO_ENCONTRADO = "NÃO ENCONTRADO"
 MAXIMO_FIELD_LABELS = {
     "Solicitante", "Proprietário", "Status", "Anexos", "Tipo da Requisição",
     "Origem", "Meio de abertura", "Duplicado pai", "Grupo de Atendimento",
@@ -89,6 +94,8 @@ class TicketAuditResult:
     error_message: str = ""
     screenshots: list[dict[str, str]] = field(default_factory=list)
     direct_link: str = ""
+    status: str = ""
+    ja_atendido: bool = False
 
 
 class ICDAuditAndCleanerRobot:
@@ -170,8 +177,21 @@ class ICDAuditAndCleanerRobot:
 
                 for idx, ticket in enumerate(tickets, start=1):
                     print(f"\n[{idx}/{len(tickets)}] 🎯 Iniciando auditoria do chamado #{ticket.ticket_id} ({ticket.subject or ticket.flow_name})...")
-                    res = self._audit_and_cleanup_ticket(page, ticket)
+                    try:
+                        res = self._audit_and_cleanup_ticket(page, ticket)
+                    except (PlaywrightError, RuntimeError) as exc:
+                        print(f"   💥 Falha no chamado #{ticket.ticket_id}: {exc}")
+                        res = TicketAuditResult(
+                            ticket_id=ticket.ticket_id,
+                            flow_name=ticket.flow_name,
+                            subject=ticket.subject,
+                            manual_action_required=True,
+                            error_message=str(exc),
+                            direct_link=f"{MAXIMO_SR_URL}&uniqueid={ticket.ticket_id}",
+                        )
                     results.append(res)
+                    if res.manual_action_required:
+                        self._reset_app(page)
 
             except Exception as exc:
                 logger.exception("Erro fatal na sessão do navegador")
@@ -222,6 +242,26 @@ class ICDAuditAndCleanerRobot:
         page.wait_for_load_state("networkidle")
         time.sleep(1.5)
 
+    def _reset_app(self, page) -> None:
+        """Recarrega o app Requisição de Serviço; descarta diálogos do Maximo travados (wait_modal)."""
+        print("   🔄 Recarregando 'Requisição de Serviço' para descartar telas travadas...")
+        try:
+            page.goto(MAXIMO_SR_URL)
+            page.wait_for_load_state("networkidle")
+            time.sleep(2)
+        except PlaywrightError as exc:
+            print(f"   ⚠️ Falha ao recarregar o app: {exc}")
+
+    def _ticket_not_found(self, page) -> bool:
+        """Maximo responde BMXAA4186E quando a busca não acha o chamado (já excluído/arquivado)."""
+        if page.get_by_text(MAXIMO_NOT_FOUND_CODE).count() == 0:
+            return False
+        ok_btn = page.get_by_role("button", name="OK")
+        if ok_btn.count() > 0 and ok_btn.first.is_visible():
+            ok_btn.first.click()
+            time.sleep(1)
+        return True
+
     def _search_ticket(self, page, ticket_id: str) -> None:
         """Busca o chamado no campo 'Localizar Solicitação de'."""
         search_box = page.get_by_role("textbox", name="Localizar Solicitação de")
@@ -257,6 +297,23 @@ class ICDAuditAndCleanerRobot:
             except PlaywrightError:
                 value = ""
             if _is_valid_grupo(value):
+                return value
+        return ""
+
+    def _get_status(self, page) -> str:
+        """Lê o valor do input 'Status' (ex.: 'EM FILA', 'RESOLVIDO')."""
+        candidates = [
+            page.get_by_role("textbox", name="Status:"),
+            page.locator("input[id*='status' i]"),
+        ]
+        for loc in candidates:
+            if loc.count() == 0:
+                continue
+            try:
+                value = (loc.first.input_value() or "").strip().upper()
+            except PlaywrightError:
+                value = ""
+            if value and not value.endswith(":"):
                 return value
         return ""
 
@@ -358,6 +415,17 @@ class ICDAuditAndCleanerRobot:
         print(f"   [1/3] 🔎 Abrindo solicitação #{ticket.ticket_id}...")
         self._search_ticket(page, ticket.ticket_id)
 
+        if self._ticket_not_found(page):
+            print(f"   🔍 Chamado #{ticket.ticket_id} não encontrado no ICD ({MAXIMO_NOT_FOUND_CODE}). Já excluído; nada a fazer.")
+            return TicketAuditResult(
+                ticket_id=ticket.ticket_id,
+                flow_name=ticket.flow_name,
+                subject=ticket.subject,
+                direct_link=direct_link,
+                status=STATUS_NAO_ENCONTRADO,
+                ja_atendido=True,
+            )
+
         initial_shot = SCREENSHOTS_DIR / f"ticket_{ticket.ticket_id}_1_abertura_{ts}.png"
         self._scroll_to_top(page)
         page.screenshot(path=str(initial_shot), full_page=True)
@@ -367,6 +435,22 @@ class ICDAuditAndCleanerRobot:
             "path": str(initial_shot),
         })
         print(f"   📸 Screenshot inicial capturado: {initial_shot.name}")
+
+        status = self._get_status(page)
+        if status in STATUS_JA_ATENDIDO:
+            grupo = self._get_grupo_atendimento(page)
+            print(f"   👤 Chamado já atendido (status '{status}'). Exclusão dispensada.")
+            return TicketAuditResult(
+                ticket_id=ticket.ticket_id,
+                flow_name=ticket.flow_name,
+                subject=ticket.subject,
+                grupo_atendimento=grupo,
+                enfileirou=bool(grupo),
+                screenshots=screenshots,
+                direct_link=direct_link,
+                status=status,
+                ja_atendido=True,
+            )
 
         print(f"   [2/3] ⏳ Monitorando Grupo de Atendimento (timeout máximo: {self.queue_timeout_s}s / {self.queue_timeout_s // 60} min)...")
         enfileirou = False
@@ -421,6 +505,7 @@ class ICDAuditAndCleanerRobot:
                 print(f"      ▶️ Tentativa de exclusão {attempt}/{self.max_retries}...")
 
                 if attempt > 1:
+                    self._reset_app(page)
                     self._search_ticket(page, ticket.ticket_id)
 
                 details_menus = page.get_by_role("img", name="Menu Detalhes")
@@ -513,6 +598,7 @@ class ICDAuditAndCleanerRobot:
         nao_enfileirados_count = sum(1 for r in results if not r.enfileirou)
         excluidos_count = sum(1 for r in results if r.reclassificado)
         manual_count = sum(1 for r in results if r.manual_action_required)
+        ja_atendidos_count = sum(1 for r in results if r.ja_atendido)
 
         test_run_data = None
         latest_test_json = find_latest_report()
@@ -530,6 +616,7 @@ class ICDAuditAndCleanerRobot:
             "nao_enfileirados_count": nao_enfileirados_count,
             "excluidos_count": excluidos_count,
             "manual_count": manual_count,
+            "ja_atendidos_count": ja_atendidos_count,
             "test_run": test_run_data,
             "items": [
                 {
@@ -545,6 +632,8 @@ class ICDAuditAndCleanerRobot:
                     "error_message": r.error_message,
                     "direct_link": r.direct_link,
                     "screenshots": r.screenshots,
+                    "status": r.status,
+                    "ja_atendido": r.ja_atendido,
                 }
                 for r in results
             ],
@@ -564,12 +653,20 @@ class ICDAuditAndCleanerRobot:
         print(f" • Enfileirados com Sucesso:       {enfileirados_count} ✅")
         print(f" • Não Enfileirados (Timeout 5m):  {nao_enfileirados_count} ⚠️")
         print(f" • Excluídos ('Chamado Teste'):    {excluidos_count} 🗑️")
+        print(f" • Dispensados (atendido/excluído):{ja_atendidos_count} 👤")
         print(f" • Ação Manual Requerida:          {manual_count} 🚨")
         print("=" * 80)
 
         for r in results:
             status_enfileiramento = f"✅ Enfileirou: '{r.grupo_atendimento}' ({r.wait_seconds}s)" if r.enfileirou else f"⚠️ Não Enfileirou ({r.wait_seconds}s)"
-            status_exclusao = "🗑️ Excluído" if r.reclassificado else "🚨 FALHA NA EXCLUSÃO"
+            if r.status == STATUS_NAO_ENCONTRADO:
+                status_exclusao = "🔍 Não encontrado (já excluído)"
+            elif r.ja_atendido:
+                status_exclusao = f"👤 Já atendido ({r.status})"
+            elif r.reclassificado:
+                status_exclusao = "🗑️ Excluído"
+            else:
+                status_exclusao = "🚨 FALHA NA EXCLUSÃO"
             print(f" • #{r.ticket_id} | {status_enfileiramento} | {status_exclusao}")
 
         if manual_count > 0:

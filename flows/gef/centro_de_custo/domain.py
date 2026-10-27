@@ -12,8 +12,10 @@ MENU_INICIAL = [
 
 MSG_SOLICITAR_ABERTURA = (
     "Para solicitar abertura do centro de custo, acesse o link: \n"
-    "[Serviços Financeiros (senac.br)](https://serv-financ-frontend.cloud.sp.senac.br/atualizar)"
+    "[Serviços Financeiros (senac.br)](https://www.intranet.sp.senac.br/intranet-frontend/sistemas-integrados/detalhes/459)"
 )
+
+CURSO_NAO_ENCONTRADO = {"não encontrei o curso", "curso não encontrado"}
 
 NEXT = [
     ("Visualizar outro centro de custo", "de_novo"),

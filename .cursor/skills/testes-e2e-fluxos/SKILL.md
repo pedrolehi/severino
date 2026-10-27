@@ -1,6 +1,6 @@
 ---
 name: testes-e2e-fluxos
-description: Explica e opera o kit de testes E2E conversacionais do from-scratch-multiagent (cenários multi-turno, runner, relatórios) e o robô Playwright que audita enfileiramento e exclui chamados teste no ICD/Maximo. Use ao criar ou editar cenários em tests/scenarios, rodar tests/run_tests.py, abrir chamados teste em prod, limpar chamados com scripts/icd_cleaner_robot.py ou investigar falhas de cenário/robô.
+description: Explica e opera o kit de testes E2E conversacionais do The.ia (cenários multi-turno, runner, relatórios) e o robô Playwright que audita enfileiramento e exclui chamados teste no ICD/Maximo. Use ao criar ou editar cenários em tests/scenarios, rodar tests/run_tests.py, abrir chamados teste em prod, limpar chamados com scripts/icd_cleaner_robot.py ou investigar falhas de cenário/robô.
 ---
 
 # Testes E2E de Fluxos + Robô ICD

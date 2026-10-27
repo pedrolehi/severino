@@ -1,0 +1,14 @@
+---
+description: Quando usar form vs pergunta no chat nos fluxos (flows/*)
+globs: flows/**
+alwaysApply: false
+---
+
+# Form só para preenchimento composto
+
+- Um único campo de texto livre NÃO é form. Use `component: "question"` (screens.json) ou `question_screen(texto)` (`flows/kit.py`). O usuário responde pelo input do chat.
+- `form` só quando:
+  - há 2+ campos a preencher juntos; ou
+  - o campo exige widget especial: `file` (anexo), `select` (lista), `date`.
+- Parse da resposta de pergunta: `field_text(user_text, key)` — aceita texto cru do chat e JSON de form.
+- Escolha fechada com poucas opções: `buttons`, não form.

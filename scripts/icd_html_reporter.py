@@ -175,7 +175,9 @@ def generate_html_report(
                 
                 audit = items_by_ticket.get(str(tid).strip())
                 if audit:
-                    if audit.get("reclassificado"):
+                    if audit.get("ja_atendido"):
+                        icd_status = f'<span class="badge-status success">👤 Já atendido ({audit.get("status", "")})</span>'
+                    elif audit.get("reclassificado"):
                         icd_status = '<span class="badge-status success">✓ Excluído no ICD (Chamado Teste)</span>'
                     elif audit.get("manual_action_required"):
                         icd_status = '<span class="badge-status danger">🚨 Exclusão Manual Requerida</span>'
@@ -922,7 +924,9 @@ def generate_html_report(
             enfileiramento_badge = f"""<span class="badge-status warning">⚠ Não Enfileirou (Timeout 4m)</span>"""
             grupo_display = '<span style="color: #f59e0b;">(Vazio / Não roteado)</span>'
 
-        if reclassificado:
+        if item.get("ja_atendido"):
+            exclusao_badge = f"""<span class="badge-status success">👤 Já atendido ({item.get("status", "")})</span>"""
+        elif reclassificado:
             exclusao_badge = f"""<span class="badge-status success">✓ Excluído (Chamado Teste)</span>"""
         elif manual:
             exclusao_badge = f"""<span class="badge-status danger">🚨 Exclusão Manual Necessária</span>"""

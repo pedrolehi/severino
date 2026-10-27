@@ -1,56 +1,20 @@
 {
   "screens": {
     "texto_metodo": {
-      "component": "form",
-      "name": "gef_gestao_pagamentos_texto_metodo",
-      "title": "Descreva detalhadamente a sua solicitação.",
-      "fields": [
-        {
-          "key": "texto",
-          "title": "Solicitação",
-          "widget": "text",
-          "required": true
-        }
-      ]
+      "component": "question",
+      "text": "Descreva detalhadamente a sua solicitação."
     },
     "documento": {
-      "component": "form",
-      "name": "gef_gestao_pagamentos_documento",
-      "title": "Agora digite o número do CPF ou CNPJ:",
-      "fields": [
-        {
-          "key": "documento",
-          "title": "CPF ou CNPJ",
-          "widget": "text",
-          "required": true
-        }
-      ]
+      "component": "question",
+      "text": "Agora digite o número do CPF ou CNPJ:"
     },
     "banco": {
-      "component": "form",
-      "name": "gef_gestao_pagamentos_banco",
-      "title": "Por último, informe os dados bancários.",
-      "fields": [
-        {
-          "key": "banco",
-          "title": "Dados bancários",
-          "widget": "text",
-          "required": true
-        }
-      ]
+      "component": "question",
+      "text": "Por último, informe os dados bancários."
     },
     "texto_problema": {
-      "component": "form",
-      "name": "gef_gestao_pagamentos_texto_problema",
-      "title": "Por favor, detalhe um pouco sobre seu problema.",
-      "fields": [
-        {
-          "key": "texto",
-          "title": "Detalhe",
-          "widget": "text",
-          "required": true
-        }
-      ]
+      "component": "question",
+      "text": "Por favor, detalhe um pouco sobre seu problema."
     },
     "arquivo": {
       "component": "form",

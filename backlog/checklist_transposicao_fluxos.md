@@ -1,6 +1,6 @@
-# Checklist de Transposição de Fluxos: `senac-multiagent` ➔ `from-scratch-multiagent`
+# Checklist de Transposição de Fluxos: `senac-multiagent` ➔ `The.ia`
 
-Documento para rastreamento da migração e reescrita dos fluxos conversacionais/operacionais legados (Watson Orchestrate) para a arquitetura nativa em Python / LangGraph no repositório `from-scratch-multiagent`.
+Documento para rastreamento da migração e reescrita dos fluxos conversacionais/operacionais legados (Watson Orchestrate) para a arquitetura nativa em Python / LangGraph no repositório `The.ia`.
 
 ---
 
@@ -16,7 +16,7 @@ Documento para rastreamento da migração e reescrita dos fluxos conversacionais
 
 - [x] **Flow_GPG_Consulta_documentos**
   - **Identificador no Orchestrate:** `Flow_GPG_Consulta_documentos`
-  - **Módulo no `from-scratch`:** [`flows/gpg/consulta_documentos`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gpg/consulta_documentos)
+  - **Módulo no `The.ia`:** [`flows/gpg/consulta_documentos`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gpg/consulta_documentos)
   - **Nome registrado:** `consulta_documentos`
   - **Status:** **Finalizado (100% fiel)** — Validação de chapa na sessão, pesquisa de documentos por palavra-chave, formatação e menu pós-consulta.
 
@@ -28,31 +28,31 @@ Documento para rastreamento da migração e reescrita dos fluxos conversacionais
 
 - [x] **Flow_GEF_Centro_de_custo**
   - **Identificador no Orchestrate:** `Flow_GEF_Centro_de_custo_3905dn`
-  - **Módulo no `from-scratch`:** [`flows/gef/centro_de_custo`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gef/centro_de_custo)
+  - **Módulo no `The.ia`:** [`flows/gef/centro_de_custo`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gef/centro_de_custo)
   - **Nome registrado:** `centro_de_custo`
   - **Status:** **Finalizado (100% fiel)** — Menu inicial com 2 opções ("Consultar Centro de Custo" vs "Solicitar Abertura de Centro de Custo"). Se solicitar abertura, direciona para o portal financeiro e encerra. Se consultar, executa a cadeia de seleção (Origem ➔ Modalidade ➔ Curso ➔ Ficha Técnica).
 
 - [x] **Flow_GEF_Segunda_via_nota_fiscal**
   - **Identificador no Orchestrate:** `Flow_GEF_Segunda_via_nota_fisc_7583tQ`
-  - **Módulo no `from-scratch`:** [`flows/gef/segunda_via_nota_fiscal`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gef/segunda_via_nota_fiscal)
+  - **Módulo no `The.ia`:** [`flows/gef/segunda_via_nota_fiscal`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gef/segunda_via_nota_fiscal)
   - **Nome registrado:** `segunda_via_nota_fiscal`
   - **Status:** **Finalizado (100% fiel)** — Validação SP vs Fora de SP, CNPJs prestador/tomador, competência mês/ano, ações de nova competência, outro prestador e retry.
 
 - [x] **Flow_GEF_Relatorios_financeiros**
   - **Identificador no Orchestrate:** `Fluxo_de_trabalho_ag_ntico_1_1994zc`
-  - **Módulo no `from-scratch`:** [`flows/gef/relatorios_financeiros`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gef/relatorios_financeiros)
+  - **Módulo no `The.ia`:** [`flows/gef/relatorios_financeiros`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gef/relatorios_financeiros)
   - **Nome registrado:** `relatorios_financeiros`
   - **Status:** **Finalizado (100% fiel)** — Validação de perfil de acesso, conciliação de caixa, datas inicial e final, validação de formato e fluxo pós-emissão.
 
 - [x] **Flow_GEF_Relatorios_orcamentarios**
   - **Identificador no Orchestrate:** `Flow_GEF_Relatorios_orcamentar_9139hA`
-  - **Módulo no `from-scratch`:** [`flows/gef/relatorios_orcamentarios`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gef/relatorios_orcamentarios)
+  - **Módulo no `The.ia`:** [`flows/gef/relatorios_orcamentarios`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gef/relatorios_orcamentarios)
   - **Nome registrado:** `gef_relatorios_orcamentarios`
   - **Status:** **Finalizado (100% fiel)** — Formulário de detalhe da solicitação de relatórios orçamentários e abertura classificada.
 
 - [x] **Flow_GEF_Abertura_chamado_gestao_pagamentos**
   - **Identificador no Orchestrate:** `Flow_GEF_Abertura_chamado_gest_1225sG`
-  - **Módulo no `from-scratch`:** [`flows/gef/gestao_pagamentos`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gef/gestao_pagamentos)
+  - **Módulo no `The.ia`:** [`flows/gef/gestao_pagamentos`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gef/gestao_pagamentos)
   - **Nome registrado:** `gef_gestao_pagamentos`
   - **Status:** **Finalizado (100% fiel)** — Roteamento entre alteração de método e problemas de pagamento, dados bancários, documentos e anexo.
 
@@ -60,7 +60,7 @@ Documento para rastreamento da migração e reescrita dos fluxos conversacionais
   - *Consolida os fluxos legados:*
     - Revisão de Cálculo Financeiro (`Flow_GEF_Abertura_chamado_revi_4817Z3`)
     - Não Processados / Campo Faltante (`Flow_GEF_Abertura_chamado_nao__0815Ep` / `Fluxo_de_trabalho_ag_ntico_1_1880tU`)
-  - **Módulo no `from-scratch`:** [`flows/gef/cancelamento_financeiro`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gef/cancelamento_financeiro)
+  - **Módulo no `The.ia`:** [`flows/gef/cancelamento_financeiro`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gef/cancelamento_financeiro)
   - **Nome registrado:** `gef_cancelamento_financeiro`
   - **Status:** **Finalizado (100% fiel)** — Lote vs individual, motivos de desligamento, datas de relatório, campus e anexos.
 
@@ -78,33 +78,34 @@ Documento para rastreamento da migração e reescrita dos fluxos conversacionais
 
 - [x] **Flow_GEP_Saldo_de_horas**
   - **Identificador no Orchestrate:** `Flow_GEP_Saldo_de_horas`
-  - **Módulo no `from-scratch`:** [`flows/gep/saldo_de_horas`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gep/saldo_de_horas)
+  - **Módulo no `The.ia`:** [`flows/gep/saldo_de_horas`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gep/saldo_de_horas)
   - **Nome registrado:** `saldo_de_horas`
   - **Status:** **Finalizado (100% fiel)** — Consulta do saldo da chapa via API e relatório do banco de horas com mês fechado e prévia.
 
 - [x] **Flow_GEP_abertura_chamado_beneficios**
   - **Identificador no Orchestrate:** `Fluxo_de_trabalho_ag_ntico_1_4103g1`
-  - **Módulo no `from-scratch`:** [`flows/gep/abertura_chamado_beneficios`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gep/abertura_chamado_beneficios)
+  - **Módulo no `The.ia`:** [`flows/gep/abertura_chamado_beneficios`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gep/abertura_chamado_beneficios)
   - **Nome registrado:** `gep_abertura_chamado_beneficios`
   - **Status:** **Finalizado (100% fiel)** — 5 temas de benefícios, submenu de assuntos da Cooperativa, detalhe e anexo.
 
 - [x] **Flow_GEP_abertura_chamado_carta_convite**
   - **Identificador no Orchestrate:** `Flow_GEP_abertura_chamado_cart_6872k1`
-  - **Módulo no `from-scratch`:** [`flows/gep/abertura_chamado_carta_convite`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gep/abertura_chamado_carta_convite)
+  - **Módulo no `The.ia`:** [`flows/gep/abertura_chamado_carta_convite`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gep/abertura_chamado_carta_convite)
   - **Nome registrado:** `gep_abertura_chamado_carta_convite`
   - **Status:** **Finalizado (100% fiel)** — 4 temas de carta convite, submenu de públicos para dúvidas gerais, detalhe e anexo.
 
 - [x] **Flow_GEP_abertura_chamado_ponto_eletronico**
   - **Identificador no Orchestrate:** `Flow_GEP_abertura_chamado_pont_2173fU`
-  - **Módulo no `from-scratch`:** [`flows/gep/abertura_chamado_ponto_eletronico`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gep/abertura_chamado_ponto_eletronico)
+  - **Módulo no `The.ia`:** [`flows/gep/abertura_chamado_ponto_eletronico`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gep/abertura_chamado_ponto_eletronico)
   - **Nome registrado:** `gep_abertura_chamado_ponto_eletronico`
   - **Status:** **Finalizado (100% fiel)** — Mensagem de contexto de Ponto WEB, coleta de erro, anexo de print e classificação `SNC-15003001`.
 
 - [x] **Flow_GEP_abertura_chamado_crachas**
   - **Identificador no Orchestrate:** `Fluxo_de_trabalho_ag_ntico_1_8057BD`
-  - **Módulo no `from-scratch`:** [`flows/gep/abertura_chamado_crachas`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gep/abertura_chamado_crachas)
+  - **Módulo no `The.ia`:** [`flows/gep/abertura_chamado_crachas`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gep/abertura_chamado_crachas)
   - **Nome registrado:** `gep_abertura_chamado_crachas`
-  - **Status:** **Finalizado (100% fiel)** — Coleta de detalhes de crachá funcional, anexo e protocolo `SNC_INT_00300702`.
+  - **Status:** **Finalizado** — Coleta de detalhes de crachá funcional, anexo e protocolo `SNC_INT_00300702`.
+  - **Divergência intencional:** unidade removida do fluxo (não exigida na sessão, não enviada em `LOCATION`/`UNIDADE_CURSO` nem na descrição longa).
 
 - [~] **Flow_GEP_abertura_de_chamado (Geral)**
   - **Status:** **Descartado** — Substituído pelos 4 fluxos de domínio especializados acima.
@@ -118,7 +119,7 @@ Documento para rastreamento da migração e reescrita dos fluxos conversacionais
 
 - [x] **Flow_GCR_abertura_de_chamado**
   - **Identificador no Orchestrate:** `FLOW_GCR_abertura_de_chamado_9170wf`
-  - **Módulo no `from-scratch`:** [`flows/gcr/abertura_chamado`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/gcr/abertura_chamado)
+  - **Módulo no `The.ia`:** [`flows/gcr/abertura_chamado`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/gcr/abertura_chamado)
   - **Nome registrado:** `gcr_abertura_chamado`
   - **Status:** **Finalizado (100% fiel)** — Coleta de detalhe do problema de relacionamento, upload de arquivo/anexo opcional e protocolo.
 
@@ -128,7 +129,7 @@ Documento para rastreamento da migração e reescrita dos fluxos conversacionais
 
 - [x] **Flow_GEDUC_abertura_de_chamado**
   - *Origem legada:* [`Abertura_chamado_GEDUC.json`](file:///c:/Users/pedro.lrmuniz/Documents/assistente-senac/senac-multiagent/flows/homolog/geduc/Abertura_chamado_GEDUC.json)
-  - **Módulo no `from-scratch`:** [`flows/geduc/abertura_chamado`](file:///c:/Users/pedro.lrmuniz/Documents/from-scratch-multiagent/flows/geduc/abertura_chamado)
+  - **Módulo no `The.ia`:** [`flows/geduc/abertura_chamado`](file:///c:/Users/pedro.lrmuniz/Documents/The.ia/flows/geduc/abertura_chamado)
   - **Nome registrado:** `geduc_abertura_chamado`
   - **Status:** **Finalizado (100% fiel)** — Árvore completa de 12 assuntos com submenus interativos específicos de domínio (Portarias, Cancelamento educacional, Diário de classe, Matrícula, Encerramento de curso, Sistec, SED, SEE/SP) + detalhe + anexo.
 

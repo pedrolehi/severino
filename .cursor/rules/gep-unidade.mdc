@@ -1,0 +1,15 @@
+---
+description: Unidade do colaborador nos chamados GEP (flows/gep/*)
+globs: flows/gep/**
+alwaysApply: false
+---
+
+# Chamados GEP sem unidade
+
+- A sessão real (orquestrador → `identifyEmployee` pela chapa) não traz unidade. Exigir unidade bloqueia o fluxo com "A sessão não traz unidade do colaborador".
+- Campos obrigatórios da sessão nos chamados GEP: `nome`, `email`, `cpf`. Nunca `unidade`.
+  - Comuns: `SESSION_KEYS` em `flows/gep/common.py` (ponto, benefícios, carta convite).
+  - Crachás: `SESSION_KEYS` em `flows/gep/abertura_chamado_crachas/domain.py`.
+  - Genérico: `flows/gep/abertura_chamado/nodes.py`.
+- A unidade também não é enviada: passar `{**info, "unidade": ""}` para `pessoa_body`. Assim o chamado sai sem `LOCATION`/`UNIDADE_CURSO` e sem a linha "Unidade:" na descrição, mesmo que a sessão traga unidade.
+- Novo fluxo GEP de chamado: usar `checar_sessao_gep` e `submeter_chamado_gep` de `flows/gep/common.py`, que já seguem esta regra.

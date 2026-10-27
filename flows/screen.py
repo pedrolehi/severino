@@ -2,7 +2,11 @@
 
 component:
   buttons — text + buttons[{label, value}]
+  question — text. Pergunta livre; a resposta vem pelo input do chat.
   form — title, name, fields[{key, title, widget, validationType, help, placeholder, required}]
+
+form só para preenchimento composto ou widget especial (file, select, date).
+Um único campo de texto livre é question.
 
 widget: text | file | select | date
 validationType é prop. O título do campo fica limpo.
@@ -15,7 +19,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-_COMPONENTS = {"buttons", "form"}
+_COMPONENTS = {"buttons", "question", "form"}
 _WIDGETS = {
     "text": "TextWidget",
     "file": "FileWidget",
@@ -52,6 +56,8 @@ def render_screen(screen: dict[str, Any]) -> dict[str, Any]:
                 for button in screen["buttons"]
             ],
         }
+    if component == "question":
+        return {"response_type": "text", "text": screen_text(screen)}
     if component == "form":
         return _render_form(screen)
     raise ValueError(f"component desconhecido: {component}")
@@ -72,6 +78,10 @@ def _validate_screen(filename: str, name: str, screen: dict[str, Any]) -> None:
                 raise ValueError(f"{filename}: tela {name} button sem label")
             if not str(button.get("value") or "").strip():
                 raise ValueError(f"{filename}: tela {name} button sem value")
+        return
+    if component == "question":
+        if not str(screen.get("text") or "").strip():
+            raise ValueError(f"{filename}: tela {name} sem text")
         return
     if not str(screen.get("title") or "").strip():
         raise ValueError(f"{filename}: tela {name} sem title")

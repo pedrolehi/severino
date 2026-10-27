@@ -14,36 +14,12 @@ ASK_ANEXO = [
     ("Não", "nao"),
 ]
 
-SESSION_KEYS = ("nome", "email", "cpf", "unidade")
+# Unidade do colaborador não é exigida nem enviada nos chamados GEP: a sessão real não a traz.
+SESSION_KEYS = ("nome", "email", "cpf")
 
 
 def checar_sessao_gep(info: dict[str, str]) -> tuple[str, ...]:
     return missing_fields(info, SESSION_KEYS)
-
-
-def detalhe_form(
-    *,
-    name: str,
-    title: str = "Detalhes da Solicitação",
-    field_title: str = "Detalhe do problema",
-    placeholder: str = "Descreva detalhadamente a sua solicitação...",
-    help_text: str = "Descreva o que aconteceu para que o chamado possa ser atendido.",
-) -> dict[str, Any]:
-    return {
-        "component": "form",
-        "name": name,
-        "title": title,
-        "fields": [
-            {
-                "key": "texto",
-                "title": field_title,
-                "widget": "text",
-                "help": help_text,
-                "placeholder": placeholder,
-                "required": True,
-            }
-        ],
-    }
 
 
 def anexo_form(
@@ -82,7 +58,7 @@ def submeter_chamado_gep(
     ticketspecs: list[dict[str, Any]] | None = None,
 ) -> str:
     body = pessoa_body(
-        info,
+        {**info, "unidade": ""},
         tipo=tipo,
         classification=classification,
         texto=texto,

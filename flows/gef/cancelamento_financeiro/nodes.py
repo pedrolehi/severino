@@ -13,6 +13,7 @@ from flows.kit import (
     match_choice,
     pack,
     protocol_message,
+    question_screen,
     reject,
     select_form,
     session_block,
@@ -45,15 +46,6 @@ STEP_ITEM_MOTIVO_AULA = "item_motivo_aula"
 STEP_ITEM_OFERTA = "item_oferta"
 STEP_ITEM_ANEXO = "item_anexo"
 STEP_ITEM_ARQUIVO = "item_arquivo"
-
-
-def _texto_form(name: str, title: str, key: str) -> dict[str, Any]:
-    return {
-        "component": "form",
-        "title": title,
-        "name": name,
-        "fields": [{"key": key, "title": title, "widget": "text", "required": True}],
-    }
 
 
 def _data_form() -> dict[str, Any]:
@@ -189,13 +181,13 @@ def _campos_faltantes(info: dict[str, str], flow_data: dict[str, Any]) -> dict:
         return _ask(
             STEP_MOTIVO_MSG,
             flow_data,
-            _texto_form("gef_cancelamento_motivo_msg", d.ASK_MOTIVO_MSG, "motivoMsg"),
+            question_screen(d.ASK_MOTIVO_MSG),
         )
     if tipo == "Revisão de Cálculo" and not str(flow_data.get("idCancelamento") or "").strip():
         return _ask(
             STEP_ID_CANCELAMENTO,
             flow_data,
-            _texto_form("gef_cancelamento_id", d.ASK_ID_CANCELAMENTO, "idCancelamento"),
+            question_screen(d.ASK_ID_CANCELAMENTO),
         )
     return _abrir(info, flow_data)
 
@@ -275,7 +267,7 @@ def _pedir_motivo_item(flow_data: dict[str, Any]) -> dict:
         return _ask(
             STEP_ITEM_MOTIVO,
             flow_data,
-            _texto_form("gef_cancelamento_motivo_item", d.ASK_MOTIVO, "motivo"),
+            question_screen(d.ASK_MOTIVO),
         )
     flow_data["motivo_options"] = motivos
     flow_data["item_idAluno"] = item.get("idAluno") or ""
@@ -298,31 +290,31 @@ def _faltantes_item(flow_data: dict[str, Any]) -> dict:
         return _ask(
             STEP_ITEM_ID,
             flow_data,
-            _texto_form("gef_cancelamento_item_id", d.ASK_ID_ALUNO_ITEM, "idAluno"),
+            question_screen(d.ASK_ID_ALUNO_ITEM),
         )
     if not str(item.get("requisicao") or flow_data.get("item_requisicao") or "").strip():
         return _ask(
             STEP_ITEM_REQ,
             flow_data,
-            _texto_form("gef_cancelamento_item_req", d.ASK_REQUISICAO_ITEM, "requisicao"),
+            question_screen(d.ASK_REQUISICAO_ITEM),
         )
     if not str(item.get("inscricao") or flow_data.get("item_inscricao") or "").strip():
         return _ask(
             STEP_ITEM_INSC,
             flow_data,
-            _texto_form("gef_cancelamento_item_insc", d.ASK_INSCRICAO, "inscricao"),
+            question_screen(d.ASK_INSCRICAO),
         )
     if not str(flow_data.get("item_motivo") or "").strip():
         return _ask(
             STEP_ITEM_MOTIVO_AULA,
             flow_data,
-            _texto_form("gef_cancelamento_motivo_aula", d.ASK_MOTIVO_AULA, "motivoAula"),
+            question_screen(d.ASK_MOTIVO_AULA),
         )
     if not str(item.get("oferta") or flow_data.get("item_oferta") or "").strip():
         return _ask(
             STEP_ITEM_OFERTA,
             flow_data,
-            _texto_form("gef_cancelamento_item_oferta", d.ASK_OFERTA, "oferta"),
+            question_screen(d.ASK_OFERTA),
         )
     return _consultar_item(flow_data)
 
@@ -422,7 +414,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
         return _ask(
             STEP_DESCRICAO,
             flow_data,
-            _texto_form("gef_cancelamento_descricao", d.ASK_DESCRICAO, "descricao"),
+            question_screen(d.ASK_DESCRICAO),
         )
 
     if step == STEP_LOTE:
@@ -436,7 +428,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
             return _ask(
                 STEP_DESCRICAO,
                 flow_data,
-                _texto_form("gef_cancelamento_descricao", d.ASK_DESCRICAO, "descricao"),
+                question_screen(d.ASK_DESCRICAO),
             )
         return _ask(STEP_DATA, flow_data, _data_form())
 
@@ -447,13 +439,13 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_DESCRICAO,
                 d.ASK_DESCRICAO,
                 flow_data,
-                _texto_form("gef_cancelamento_descricao", d.ASK_DESCRICAO, "descricao"),
+                question_screen(d.ASK_DESCRICAO),
             )
         flow_data["descricao"] = texto
         return _ask(
             STEP_ID_ALUNO,
             flow_data,
-            _texto_form("gef_cancelamento_id_aluno", d.ASK_ID_ALUNO, "idAluno"),
+            question_screen(d.ASK_ID_ALUNO),
         )
 
     if step == STEP_ID_ALUNO:
@@ -463,7 +455,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ID_ALUNO,
                 d.ASK_ID_ALUNO,
                 flow_data,
-                _texto_form("gef_cancelamento_id_aluno", d.ASK_ID_ALUNO, "idAluno"),
+                question_screen(d.ASK_ID_ALUNO),
             )
         flow_data["emplid"] = emplid
         return _consultar_por_id(flow_data, emplid)
@@ -584,7 +576,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_MOTIVO_MSG,
                 d.ASK_MOTIVO_MSG,
                 flow_data,
-                _texto_form("gef_cancelamento_motivo_msg", d.ASK_MOTIVO_MSG, "motivoMsg"),
+                question_screen(d.ASK_MOTIVO_MSG),
             )
         flow_data["motivoMsg"] = texto
         flow_data["motivo"] = texto
@@ -596,7 +588,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
             return _ask(
                 STEP_ID_CANCELAMENTO,
                 flow_data,
-                _texto_form("gef_cancelamento_id", d.ASK_ID_CANCELAMENTO, "idCancelamento"),
+                question_screen(d.ASK_ID_CANCELAMENTO),
                 (d.ID_INVALID,),
             )
         flow_data["idCancelamento"] = valor
@@ -615,7 +607,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                     options=options,
                 )
                 if options
-                else _texto_form("gef_cancelamento_motivo_item", d.ASK_MOTIVO, "motivo")
+                else question_screen(d.ASK_MOTIVO)
             )
             return _nao_entendi(STEP_ITEM_MOTIVO, d.ASK_MOTIVO, flow_data, screen)
         flow_data["item_motivo"] = chosen
@@ -643,7 +635,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
         return _ask(
             STEP_ITEM_DESCRICAO,
             flow_data,
-            _texto_form("gef_cancelamento_item_desc", d.ASK_DESCRICAO_CURTA, "descricao"),
+            question_screen(d.ASK_DESCRICAO_CURTA),
         )
 
     if step == STEP_ITEM_DESCRICAO:
@@ -653,7 +645,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ITEM_DESCRICAO,
                 d.ASK_DESCRICAO_CURTA,
                 flow_data,
-                _texto_form("gef_cancelamento_item_desc", d.ASK_DESCRICAO_CURTA, "descricao"),
+                question_screen(d.ASK_DESCRICAO_CURTA),
             )
         flow_data["item_descricao"] = texto
         return _faltantes_item(flow_data)
@@ -665,7 +657,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ITEM_ID,
                 d.ASK_ID_ALUNO_ITEM,
                 flow_data,
-                _texto_form("gef_cancelamento_item_id", d.ASK_ID_ALUNO_ITEM, "idAluno"),
+                question_screen(d.ASK_ID_ALUNO_ITEM),
             )
         flow_data["item_idAluno"] = valor
         return _faltantes_item(flow_data)
@@ -677,7 +669,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ITEM_REQ,
                 d.ASK_REQUISICAO_ITEM,
                 flow_data,
-                _texto_form("gef_cancelamento_item_req", d.ASK_REQUISICAO_ITEM, "requisicao"),
+                question_screen(d.ASK_REQUISICAO_ITEM),
             )
         flow_data["item_requisicao"] = valor
         return _faltantes_item(flow_data)
@@ -689,7 +681,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ITEM_INSC,
                 d.ASK_INSCRICAO,
                 flow_data,
-                _texto_form("gef_cancelamento_item_insc", d.ASK_INSCRICAO, "inscricao"),
+                question_screen(d.ASK_INSCRICAO),
             )
         flow_data["item_inscricao"] = valor
         return _faltantes_item(flow_data)
@@ -701,7 +693,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ITEM_MOTIVO_AULA,
                 d.ASK_MOTIVO_AULA,
                 flow_data,
-                _texto_form("gef_cancelamento_motivo_aula", d.ASK_MOTIVO_AULA, "motivoAula"),
+                question_screen(d.ASK_MOTIVO_AULA),
             )
         flow_data["item_motivo"] = valor
         return _faltantes_item(flow_data)
@@ -713,7 +705,7 @@ def gef_cancelamento_financeiro_node(state: MultiAgentState) -> dict:
                 STEP_ITEM_OFERTA,
                 d.ASK_OFERTA,
                 flow_data,
-                _texto_form("gef_cancelamento_item_oferta", d.ASK_OFERTA, "oferta"),
+                question_screen(d.ASK_OFERTA),
             )
         flow_data["item_oferta"] = valor
         return _faltantes_item(flow_data)

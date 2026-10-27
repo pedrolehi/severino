@@ -1,1 +1,1 @@
-"""Pacote de testes automatizados E2E do from-scratch-multiagent."""
+"""Pacote de testes automatizados E2E do The.ia."""

@@ -10,6 +10,7 @@ from flows.kit import (
     form_data_of,
     last_user_text,
     pack,
+    question_screen,
     reject,
     session_block,
 )
@@ -24,11 +25,8 @@ STEP_DETALHE = "detalhe"
 STEP_ANEXO = "ask_anexo"
 STEP_ARQUIVO = "anexo"
 
-FORM_DETALHE = c.detalhe_form(
-    name="gep_ponto_detalhe",
-    title="Ponto Eletrônico - Detalhes",
-    field_title="Descreva o problema ocorrido no Ponto WEB:",
-    placeholder="Descreva o erro ou ajuste necessário no ponto eletrônico...",
+PERGUNTA_DETALHE = question_screen(
+    "Descreva o problema ocorrido no Ponto WEB: o erro ou o ajuste necessário."
 )
 
 FORM_ARQUIVO = c.anexo_form(
@@ -59,11 +57,11 @@ def gep_abertura_chamado_ponto_eletronico_node(state: MultiAgentState) -> dict:
             step=STEP_DETALHE,
             flow_data={},
             texts=(d.MSG_CONTEXTO,),
-            screens=(FORM_DETALHE,),
+            screens=(PERGUNTA_DETALHE,),
         )
 
     if step == STEP_DETALHE:
-        texto = field_text(user_text, "texto") or str(form_data_of(user_text).get("texto") or "").strip()
+        texto = field_text(user_text, "texto")
         if not texto:
             return reject(
                 flow_name=d.FLOW_NAME,
@@ -71,7 +69,7 @@ def gep_abertura_chamado_ponto_eletronico_node(state: MultiAgentState) -> dict:
                 prompt="Por favor, detalhe o problema ocorrido no ponto eletrônico:",
                 flow_data=flow_data,
                 service_label=d.SERVICE_LABEL,
-                resume_ui=[FORM_DETALHE],
+                resume_ui=[PERGUNTA_DETALHE],
             )
         flow_data["texto"] = texto
         return pack(

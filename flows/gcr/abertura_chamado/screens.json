@@ -1,19 +1,8 @@
 {
   "screens": {
     "detalhe": {
-      "component": "form",
-      "name": "gcr_abertura_chamado_detalhe",
-      "title": "Dúvidas gerais",
-      "fields": [
-        {
-          "key": "texto",
-          "title": "Detalhe do problema",
-          "widget": "text",
-          "help": "Por favor, detalhe um pouco sobre seu problema.",
-          "placeholder": "Descreva o que aconteceu",
-          "required": true
-        }
-      ]
+      "component": "question",
+      "text": "Por favor, detalhe um pouco sobre seu problema. Descreva o que aconteceu."
     },
     "anexo": {
       "component": "form",

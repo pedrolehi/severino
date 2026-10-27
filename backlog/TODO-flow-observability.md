@@ -2,7 +2,7 @@
 
 Status: **backlog** — não implementar agora.  
 Origem: piloto `segunda_via_nota_fiscal` (CLI ↔ senac-orchestrate).  
-Repo: `from-scratch-multiagent`.
+Repo: `The.ia`.
 
 ---
 

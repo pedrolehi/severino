@@ -1,4 +1,4 @@
-# Dockerfile para from-scratch-multiagent (Hub Multi-Assistente Senac)
+# Dockerfile para The.ia (Hub Multi-Assistente Senac)
 # Baseado no padrao de producao para OpenShift / IBM Cloud
 FROM python:3.11-slim
 

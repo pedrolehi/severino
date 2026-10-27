@@ -30,6 +30,8 @@ def option_pairs(payload: Any) -> list[tuple[str, str]]:
         for item in listing:
             if isinstance(item, (list, tuple)) and len(item) >= 2:
                 pairs.append((_plain(str(item[0])) or str(item[1]), str(item[1])))
+            elif isinstance(item, str) and item.strip():
+                pairs.append((item, item))
         if pairs:
             return pairs
     dados = payload.get("DADOS")
@@ -151,7 +153,10 @@ def pessoa_body(
     nome = info.get("nome") or ""
     email = info.get("email") or ""
     unidade = info.get("unidade") or ""
-    long_desc = f"Nome: {nome}\nEmail: {email}\nUnidade: {unidade}\nTema: {tema}"
+    long_desc = f"Nome: {nome}\nEmail: {email}\n"
+    if unidade:
+        long_desc += f"Unidade: {unidade}\n"
+    long_desc += f"Tema: {tema}"
     if subtema:
         long_desc += f" | Subtema: {subtema}"
     long_desc += f"\nDescrição: {texto}"

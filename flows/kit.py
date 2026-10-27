@@ -83,6 +83,10 @@ def buttons_screen(text: str, choices: list[tuple[str, str]]) -> dict[str, Any]:
     }
 
 
+def question_screen(text: str) -> dict[str, Any]:
+    return {"component": "question", "text": text}
+
+
 def select_form(
     *,
     title: str,
@@ -162,7 +166,9 @@ def reject(
 ) -> dict[str, Any]:
     data = dict(flow_data)
     if resume_ui:
-        data["_resume_ui"] = resume_ui
+        data["_resume_ui"] = [
+            render_screen(item) if "component" in item else item for item in resume_ui
+        ]
     return unexpected_input(
         flow_name=flow_name,
         resume_step=resume_step,

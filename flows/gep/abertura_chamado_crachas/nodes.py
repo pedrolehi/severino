@@ -10,12 +10,13 @@ from flows.kit import (
     form_data_of,
     last_user_text,
     pack,
+    question_screen,
     reject,
     session_block,
 )
 from flows.payload import anexo_texto
 from flows.runtime import parse_boolean
-from flows.session import session_from_state
+from flows.session import missing_fields, session_from_state
 from flows.gep import common as c
 from flows.gep.abertura_chamado_crachas import domain as d
 from graph.state import MultiAgentState
@@ -24,11 +25,9 @@ STEP_DETALHE = "detalhe"
 STEP_ANEXO = "ask_anexo"
 STEP_ARQUIVO = "anexo"
 
-FORM_DETALHE = c.detalhe_form(
-    name="gep_crachas_detalhe",
-    title="Crachás - Detalhes",
-    field_title="Descreva sua solicitação sobre crachás:",
-    placeholder="Informe se precisa de 2ª via, alteração de dados, novo crachá ou relatar erro...",
+PERGUNTA_DETALHE = question_screen(
+    "Descreva sua solicitação sobre crachás. Informe se precisa de 2ª via, "
+    "alteração de dados, novo crachá ou se quer relatar um erro."
 )
 
 FORM_ARQUIVO = c.anexo_form(
@@ -42,10 +41,10 @@ def gep_abertura_chamado_crachas_node(state: MultiAgentState) -> dict:
     step = state.get("flow_step")
     flow_data: dict[str, Any] = dict(state.get("flow_data") or {})
     user_text = last_user_text(state.get("messages") or [])
-    info = session_from_state(state)
+    info = {**session_from_state(state), "unidade": ""}
 
     if step is None:
-        missing = c.checar_sessao_gep(info)
+        missing = missing_fields(info, d.SESSION_KEYS)
         if missing:
             return pack(
                 flow_name=d.FLOW_NAME,
@@ -58,11 +57,11 @@ def gep_abertura_chamado_crachas_node(state: MultiAgentState) -> dict:
             flow_name=d.FLOW_NAME,
             step=STEP_DETALHE,
             flow_data={},
-            screens=(FORM_DETALHE,),
+            screens=(PERGUNTA_DETALHE,),
         )
 
     if step == STEP_DETALHE:
-        texto = field_text(user_text, "texto") or str(form_data_of(user_text).get("texto") or "").strip()
+        texto = field_text(user_text, "texto")
         if not texto:
             return reject(
                 flow_name=d.FLOW_NAME,
@@ -70,7 +69,7 @@ def gep_abertura_chamado_crachas_node(state: MultiAgentState) -> dict:
                 prompt="Por favor, detalhe a sua solicitação sobre crachás:",
                 flow_data=flow_data,
                 service_label=d.SERVICE_LABEL,
-                resume_ui=[FORM_DETALHE],
+                resume_ui=[PERGUNTA_DETALHE],
             )
         flow_data["texto"] = texto
         return pack(

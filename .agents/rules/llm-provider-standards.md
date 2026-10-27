@@ -1,4 +1,4 @@
-# Diretriz de Provedores LLM e Redes — From Scratch Multiagent
+# Diretriz de Provedores LLM e Redes — The.ia
 
 1. **Desacoplamento de OpenAI**:
    - `OPENAI_API_KEY` NUNCA deve ser obrigatória para a inicialização do pod ou do app (evitar `raise ValueError` no startup).

@@ -1,4 +1,4 @@
-"""Provedores de LLM para o from-scratch-multiagent.
+"""Provedores de LLM para o The.ia.
 
 Suporta:
 1. IBM Watsonx / Provider (Granite) - Padrão / Prioritário
@@ -27,6 +27,7 @@ from langchain_core.messages import (
 )
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.runnables import RunnableLambda
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import BaseModel, Field
 
 from core.config import (
@@ -109,6 +110,11 @@ def _extract_json_from_text(text: str) -> Any:
         candidate = text[first_brace : last_brace + 1]
         try:
             return json.loads(candidate)
+        except Exception:
+            pass
+        try:
+            parsed, _ = json.JSONDecoder().raw_decode(text, first_brace)
+            return parsed
         except Exception:
             pass
 
@@ -254,6 +260,41 @@ class ToolBoundRunnable:
             return AIMessage(content="Não foi possível acionar os serviços no momento.")
 
 
+class WatsonxToolBoundRunnable:
+    """bind_tools com function calling nativo do Watsonx; cai no ToolBoundRunnable se a API falhar."""
+
+    def __init__(self, llm: "WatsonxChatModel", tools: list[Any]):
+        self.llm = llm
+        self.tools = tools
+        self.fallback = ToolBoundRunnable(llm, tools)
+
+    def invoke(self, input: Any, config: Optional[Any] = None) -> AIMessage:
+        messages = input if isinstance(input, list) else [input]
+        try:
+            response = self.llm.chat_with_tools(messages, self.tools)
+        except Exception as exc:
+            logger.warning("Function calling nativo falhou (%s). Usando ToolBoundRunnable.", exc)
+            return self.fallback.invoke(input, config=config)
+
+        if response.tool_calls:
+            return response
+
+        content = response.content if isinstance(response.content, str) else str(response.content)
+        parsed = _extract_json_from_text(content) if "{" in content else None
+        if isinstance(parsed, dict) and "tool" in parsed:
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": str(parsed["tool"]),
+                        "args": parsed.get("arguments") or {},
+                        "id": f"call_{int(time.time() * 1000)}",
+                    }
+                ],
+            )
+        return response
+
+
 class WatsonxChatModel(BaseChatModel):
     """Implementação nativa de BaseChatModel para IBM Watsonx (Granite)."""
 
@@ -283,12 +324,48 @@ class WatsonxChatModel(BaseChatModel):
         tools: list[Any],
         **kwargs: Any,
     ) -> Any:
-        return ToolBoundRunnable(self, tools)
+        return WatsonxToolBoundRunnable(self, tools)
 
     def _get_token(self) -> str:
         if not self.api_key:
             raise ValueError("IBM_API_KEY não está configurada")
         return get_ibm_iam_token(self.api_key)
+
+    def chat_with_tools(self, messages: List[BaseMessage], tools: list[Any]) -> AIMessage:
+        token = self._get_token()
+        url = f"{self.base_url.rstrip('/')}/ml/v1/text/chat?version={self.api_version}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        payload: dict[str, Any] = {
+            "model_id": self.model_name,
+            "project_id": self.project_id,
+            "messages": _messages_to_watsonx_format(messages),
+            "tools": [convert_to_openai_tool(t) for t in tools],
+            "tool_choice_option": "auto",
+            "max_tokens": self.max_tokens,
+            "temperature": 0.0,
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=60)
+        res.raise_for_status()
+        choices = res.json().get("choices") or []
+        msg_obj = (choices[0].get("message") if choices else None) or {}
+
+        tool_calls = []
+        for call in msg_obj.get("tool_calls") or []:
+            fn = call.get("function") or {}
+            raw_args = fn.get("arguments") or {}
+            args = _extract_json_from_text(raw_args) if isinstance(raw_args, str) else raw_args
+            tool_calls.append(
+                {
+                    "name": str(fn.get("name") or ""),
+                    "args": args if isinstance(args, dict) else {},
+                    "id": call.get("id") or f"call_{int(time.time() * 1000)}",
+                }
+            )
+        return AIMessage(content=msg_obj.get("content") or "", tool_calls=tool_calls)
 
     def _generate(
         self,

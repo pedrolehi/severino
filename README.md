@@ -1,4 +1,4 @@
-# from-scratch-multiagent
+# The.ia
 
 Hub multi-assistente Senac — LangGraph + FastAPI.
 
@@ -40,7 +40,7 @@ Cada request carrega o `assistant_id`. Isso decide tools, flows, collection RAG 
 ## Setup
 
 ```powershell
-cd from-scratch-multiagent
+cd The.ia
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install fastapi uvicorn python-dotenv pydantic langchain-core langchain-openai langgraph langgraph-checkpoint-redis redis openai
@@ -76,7 +76,17 @@ OPENJEV_BASE_URL=http://10.1.0.110:8011
 # senac-orchestrate (flows GEF)
 SENAC_ORCHESTRATE_URL=https://HOST/v2
 # ORCHESTRATE_USE_MOCK=true   # sem orchestrate: mock de NF
+
+# Langfuse — 1 trace por turno (nós, router, flows, RAG, LLM). Sem chaves = desligado.
+LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_SECRET_KEY=
+LANGFUSE_HOST=https://us.cloud.langfuse.com   # ou LANGFUSE_BASE_URL
 ```
+
+Trace agrupado por `session_id`; `user_id` = `user_id` do request ou chapa; tags `the.ia` e `assistant:<id>`; `environment` = `APP_ENV`. CPF, PIS, e-mail, nome e data de nascimento são mascarados (`core/observability.py`). Texto livre digitado pelo usuário vai como está.
+
+Testes unitários: `pip install -r requirements-dev.txt` e `python -m pytest`.
 
 ---
 
@@ -143,7 +153,7 @@ Debug VS Code: config **Chat CLI** em `.vscode/launch.json`.
 ## Estrutura
 
 ```
-from-scratch-multiagent/
+The.ia/
 ├── main.py                 # API FastAPI
 ├── assistants/             # plugins (1 pasta = 1 produto)
 │   ├── intranet/

@@ -16,6 +16,7 @@ STEP_MODALIDADE = "modalidade"
 STEP_CURSO = "curso"
 STEP_FICHA = "ficha"
 STEP_NEXT = "next"
+LISTA_VAZIA = "A lista veio vazia."
 
 
 def _choices(path: str, params: dict[str, str] | None = None) -> tuple[list[tuple[str, str]], str | None]:
@@ -24,7 +25,7 @@ def _choices(path: str, params: dict[str, str] | None = None) -> tuple[list[tupl
         return [], result.error_detail or "erro desconhecido"
     pairs = option_pairs(result.payload)
     if not pairs:
-        return [], "A lista veio vazia."
+        return [], LISTA_VAZIA
     return pairs, None
 
 
@@ -165,6 +166,14 @@ def centro_de_custo_node(state: MultiAgentState) -> dict:
                 resume_ui=[_select(STEP_CURSO, "Centro de custo", "Curso", options)],
             )
         flow_data["curso"] = chosen
+        if chosen.strip().casefold() in d.CURSO_NAO_ENCONTRADO:
+            return pack(
+                flow_name=d.FLOW_NAME,
+                step=None,
+                flow_data=flow_data,
+                texts=(d.MSG_SOLICITAR_ABERTURA,),
+                done=True,
+            )
         fichas, error = _choices(
             "/gef/lista-ficha-tecnica",
             {

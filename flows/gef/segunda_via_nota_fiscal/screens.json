@@ -43,20 +43,8 @@
       ]
     },
     "collect_mes": {
-      "component": "form",
-      "name": "segunda_via_nota_fiscal_mes",
-      "title": "Informe a nova competência (mês e ano)",
-      "fields": [
-        {
-          "key": "mes_ano",
-          "title": "Competência",
-          "widget": "text",
-          "validationType": "MES_ANO",
-          "help": "Informe a competência fiscal.",
-          "placeholder": "03/2024",
-          "required": true
-        }
-      ]
+      "component": "question",
+      "text": "Informe a nova competência (mês e ano), por exemplo 03/2024."
     },
     "ask_nova_competencia": {
       "component": "buttons",

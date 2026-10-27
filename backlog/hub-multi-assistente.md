@@ -2,7 +2,7 @@
 
 > **TODO relacionado:** observabilidade I/O de flows por sessão → [`TODO-flow-observability.md`](./TODO-flow-observability.md) (backlog, não implementar agora).
 
-Documento de arquitetura alvo para o `from-scratch-multiagent` evoluir de POC single-assistant para **hub de assistentes virtuais** (intranet funcionário, portal aluno, futuros projetos).
+Documento de arquitetura alvo para o `The.ia` evoluir de POC single-assistant para **hub de assistentes virtuais** (intranet funcionário, portal aluno, futuros projetos).
 
 **Estratégia:** validar primeiro o conceito atual (tools + flows virtuais + graph) em escopo global; refatorar para isolamento por `assistant_id` depois.
 
@@ -52,7 +52,7 @@ Esse ID governa:
 ## Arquitetura alvo (pastas)
 
 ```
-from-scratch-multiagent/
+The.ia/
   platform/                    # contratos e motor
     assistant_contract.py      # define_assistant(...)
     flow_contract.py           # define_flow(...) — já existe em flows/
