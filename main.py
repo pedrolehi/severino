@@ -8,6 +8,8 @@ import time
 import traceback
 import uuid
 from collections.abc import Iterator
+from contextlib import AbstractContextManager
+from typing import Any, Literal
 
 import uvicorn
 from dotenv import load_dotenv
@@ -20,7 +22,12 @@ from pydantic import BaseModel, Field
 from assistants.registry import get_assistant_by_id, list_assistant_ids
 from core.config import APP_ENV
 from core.hub import build_thread_id, get_graph
-from core.observability import flush_langfuse, with_langfuse
+from core.observability import (
+    LangfuseTurn,
+    flush_langfuse,
+    langfuse_turn,
+    score_feedback,
+)
 from flows.session import normalize_user_info
 
 load_dotenv()
@@ -90,6 +97,14 @@ class ChatRequest(BaseModel):
     user_id: str | None = None
     session_id: str | None = None
     user_info: dict | None = None
+    message_id: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    message_id: str = Field(..., min_length=1)
+    feedback: Literal["positive", "negative"] | None
+    reason: str | None = None
+    reason_text: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -175,14 +190,31 @@ def _prepare(request: ChatRequest) -> tuple[str, dict, dict]:
     return session_id, graph, payload
 
 
-def _run_config(request: ChatRequest, session_id: str, run_config: dict) -> dict:
-    user_info = normalize_user_info(request.user_info) or {}
-    return with_langfuse(
+def _langfuse_turn(
+    request: ChatRequest, session_id: str, run_config: dict
+) -> AbstractContextManager[LangfuseTurn]:
+    return langfuse_turn(
         run_config,
         assistant_id=request.assistant_id,
         session_id=session_id,
-        user_id=request.user_id or user_info.get("chapa"),
+        message_id=request.message_id,
+        message=request.message,
     )
+
+
+class _TokenQueue(queue.Queue):
+    """Fila SSE que anota quando o primeiro token saiu."""
+
+    first_token_at: float | None = None
+
+    def put(self, item: Any, block: bool = True, timeout: float | None = None) -> None:
+        if (
+            self.first_token_at is None
+            and isinstance(item, dict)
+            and item.get("event") == "token"
+        ):
+            self.first_token_at = time.perf_counter()
+        super().put(item, block, timeout)
 
 
 @app.get("/")
@@ -200,18 +232,17 @@ def list_assistants() -> dict[str, list[str]]:
 def chat_endpoint(request: ChatRequest) -> ChatResponse:
     session_id, graph, payload = _prepare(request)
     payload["rag_stream"] = False
-    result = graph.invoke(
-        payload,
-        config=_run_config(
-            request,
-            session_id,
-            {
-                "configurable": {
-                    "thread_id": build_thread_id(request.assistant_id, session_id),
-                }
-            },
-        ),
-    )
+    with _langfuse_turn(
+        request,
+        session_id,
+        {
+            "configurable": {
+                "thread_id": build_thread_id(request.assistant_id, session_id),
+            }
+        },
+    ) as turn:
+        result = graph.invoke(payload, config=turn.run_config)
+        turn.finish(result)
     return ChatResponse(
         assistant_id=request.assistant_id,
         session_id=session_id,
@@ -227,27 +258,34 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
     """SSE: step enquanto nao ha token; token durante o generate; done no fim."""
     session_id, graph, payload = _prepare(request)
     payload["rag_stream"] = True
-    token_queue: queue.Queue[dict | str | None] = queue.Queue()
+    token_queue = _TokenQueue()
     holder: dict = {}
 
     def _run() -> None:
+        invoke_t0 = time.perf_counter()
         try:
-            holder["result"] = graph.invoke(
-                payload,
-                config=_run_config(
-                    request,
-                    session_id,
-                    {
-                        "configurable": {
-                            "thread_id": build_thread_id(
-                                request.assistant_id, session_id
-                            ),
-                            "token_queue": token_queue,
-                        },
-                        "metadata": {"invoke_t0": time.perf_counter()},
+            with _langfuse_turn(
+                request,
+                session_id,
+                {
+                    "configurable": {
+                        "thread_id": build_thread_id(
+                            request.assistant_id, session_id
+                        ),
+                        "token_queue": token_queue,
                     },
-                ),
-            )
+                    "metadata": {"invoke_t0": invoke_t0},
+                },
+            ) as turn:
+                result = graph.invoke(payload, config=turn.run_config)
+                first_token_at = token_queue.first_token_at
+                turn.finish(
+                    result,
+                    first_token_ms=None
+                    if first_token_at is None
+                    else int((first_token_at - invoke_t0) * 1000),
+                )
+                holder["result"] = result
         except Exception as exc:  # noqa: BLE001
             traceback.print_exc()
             print(f"[CHAT STREAM ERROR] {exc}", file=sys.stderr, flush=True)
@@ -306,6 +344,17 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/feedback", status_code=202)
+def feedback_endpoint(request: FeedbackRequest) -> dict[str, bool]:
+    recorded = score_feedback(
+        message_id=request.message_id,
+        feedback=request.feedback,
+        reason=request.reason,
+        reason_text=request.reason_text,
+    )
+    return {"recorded": recorded}
 
 
 if __name__ == "__main__":

@@ -32,6 +32,10 @@ COPY . .
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
+# SHA do commit; o Langfuse agrupa traces por release
+ARG LANGFUSE_RELEASE=local
+ENV LANGFUSE_RELEASE=$LANGFUSE_RELEASE
+
 # Ajuste de permissoes para compatibilidade com OpenShift (arbitrary UID pertencente ao GID 0)
 RUN chgrp -R 0 /app && \
     chmod -R g=u /app
