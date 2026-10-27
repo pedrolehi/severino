@@ -50,6 +50,24 @@ spec:
                   name: prod-senac-from-scratch-multiagent-secret
                   key: REDIS_PASSWORD
 
+            # Langfuse (traces por turno; sem secret = desligado)
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_HOST
+              value: "https://us.cloud.langfuse.com"
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prod-senac-from-scratch-multiagent-secret
+                  key: LANGFUSE_PUBLIC_KEY
+                  optional: true
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prod-senac-from-scratch-multiagent-secret
+                  key: LANGFUSE_SECRET_KEY
+                  optional: true
+
             # RAG / search-vectory (comunicacao interna prod via ClusterIP DNS)
             - name: SEARCH_VECTORY_URL
               value: "http://prod-senac-search-vectory-backend-service.prod-senac-orquestrator-chatbotx.svc.cluster.local:8081/api/v1"

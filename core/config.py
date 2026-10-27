@@ -76,7 +76,25 @@ USE_JEV_ROUTER = (os.getenv("USE_JEV_ROUTER") or "true").strip().lower() in {
     "yes",
 }
 
+# Langfuse: trace por turno via CallbackHandler LangChain. LANGFUSE_BASE_URL é alias.
+LANGFUSE_ENABLED = (os.getenv("LANGFUSE_ENABLED") or "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
+LANGFUSE_PUBLIC_KEY = (os.getenv("LANGFUSE_PUBLIC_KEY") or "").strip()
+LANGFUSE_SECRET_KEY = (os.getenv("LANGFUSE_SECRET_KEY") or "").strip()
+LANGFUSE_HOST = (
+    os.getenv("LANGFUSE_BASE_URL")
+    or os.getenv("LANGFUSE_HOST")
+    or "https://us.cloud.langfuse.com"
+).strip().rstrip("/")
+
 
 def is_redis_configured() -> bool:
     return bool(REDIS_HOST and REDIS_PORT and REDIS_PASSWORD)
+
+
+def is_langfuse_active() -> bool:
+    return bool(LANGFUSE_ENABLED and LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY)
 

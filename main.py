@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from assistants.registry import get_assistant_by_id, list_assistant_ids
 from core.config import APP_ENV
 from core.hub import build_thread_id, get_graph
+from core.observability import flush_langfuse, with_langfuse
 from flows.session import normalize_user_info
 
 load_dotenv()
@@ -55,6 +56,11 @@ def _silence_health_check_probes() -> None:
     uvicorn_logger.addFilter(_health_filter)
     for handler in uvicorn_logger.handlers:
         handler.addFilter(_health_filter)
+
+
+@app.on_event("shutdown")
+def _flush_traces() -> None:
+    flush_langfuse()
 
 
 raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
@@ -169,6 +175,16 @@ def _prepare(request: ChatRequest) -> tuple[str, dict, dict]:
     return session_id, graph, payload
 
 
+def _run_config(request: ChatRequest, session_id: str, run_config: dict) -> dict:
+    user_info = normalize_user_info(request.user_info) or {}
+    return with_langfuse(
+        run_config,
+        assistant_id=request.assistant_id,
+        session_id=session_id,
+        user_id=request.user_id or user_info.get("chapa"),
+    )
+
+
 @app.get("/")
 @app.get("/health")
 def read_root() -> dict[str, str]:
@@ -186,11 +202,15 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
     payload["rag_stream"] = False
     result = graph.invoke(
         payload,
-        config={
-            "configurable": {
-                "thread_id": build_thread_id(request.assistant_id, session_id),
-            }
-        },
+        config=_run_config(
+            request,
+            session_id,
+            {
+                "configurable": {
+                    "thread_id": build_thread_id(request.assistant_id, session_id),
+                }
+            },
+        ),
     )
     return ChatResponse(
         assistant_id=request.assistant_id,
@@ -214,15 +234,19 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
         try:
             holder["result"] = graph.invoke(
                 payload,
-                config={
-                    "configurable": {
-                        "thread_id": build_thread_id(
-                            request.assistant_id, session_id
-                        ),
-                        "token_queue": token_queue,
+                config=_run_config(
+                    request,
+                    session_id,
+                    {
+                        "configurable": {
+                            "thread_id": build_thread_id(
+                                request.assistant_id, session_id
+                            ),
+                            "token_queue": token_queue,
+                        },
+                        "metadata": {"invoke_t0": time.perf_counter()},
                     },
-                    "metadata": {"invoke_t0": time.perf_counter()},
-                },
+                ),
             )
         except Exception as exc:  # noqa: BLE001
             traceback.print_exc()

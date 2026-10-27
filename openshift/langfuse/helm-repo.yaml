@@ -1,0 +1,9 @@
+kind: ProjectHelmChartRepository
+apiVersion: helm.openshift.io/v1beta1
+metadata:
+  name: langfuse
+  namespace: langfuse
+spec:
+  name: Langfuse
+  connectionConfig:
+    url: https://langfuse.github.io/langfuse-k8s
